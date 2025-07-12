@@ -31,7 +31,7 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "vibe=vibe.cli:main",
+            "vibe=src.cli:main",
         ],
     },
 )

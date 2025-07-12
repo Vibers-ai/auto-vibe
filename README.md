@@ -45,22 +45,30 @@ VIBE is an advanced autonomous coding agent that transforms project documentatio
 git clone https://github.com/Vibers-ai/auto-vibe.git
 cd auto-vibe
 
+# Create and activate virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
 # Install dependencies
 pip install -r requirements.txt
-
-# Install VIBE
-pip install -e .
 ```
 
 ### Setup
 
 ```bash
-# Initialize a new project
-vibe init my-awesome-project
+# Initialize a new project using module syntax
+python -m src.cli init my-awesome-project
 cd my-awesome-project
 
-# Configure API keys
-cp .env.example .env
+# Configure API keys (create .env file)
+# Copy from parent directory:
+cp ../.env.example .env
+
 # Edit .env with your API keys:
 # GEMINI_API_KEY=your_gemini_key_here
 # ANTHROPIC_API_KEY=your_claude_key_here
@@ -73,10 +81,16 @@ cp .env.example .env
 # (PDFs, Word docs, images, markdown files)
 
 # Generate complete software project
-vibe generate
+python -m src.cli generate
 
 # Monitor progress (optional)
-vibe monitor --mode web --port 8080
+python -m src.cli monitor --mode web --port 8080
+
+# Check status
+python -m src.cli status
+
+# Validate tasks (if needed)
+python -m src.cli validate tasks.json
 ```
 
 ---
@@ -150,7 +164,7 @@ graph TD
 
 ```bash
 # Create project from business requirements document
-vibe init ecommerce-platform
+python -m src.cli init ecommerce-platform
 cd ecommerce-platform
 
 # Add your docs/
@@ -158,7 +172,7 @@ cd ecommerce-platform
 # - ui_mockups.png
 # - api_specifications.md
 
-vibe generate
+python -m src.cli generate
 # ✅ Generates: React frontend, Node.js backend, PostgreSQL database, tests
 ```
 
@@ -166,11 +180,11 @@ vibe generate
 
 ```bash
 # Generate API backend from mobile app specs
-vibe init mobile-api
+python -m src.cli init mobile-api
 cd mobile-api
 
 # Add docs/mobile_app_spec.docx with API requirements
-vibe generate --output-path ./backend
+python -m src.cli generate --output-path ./backend
 
 # ✅ Generates: FastAPI backend, authentication, database models, documentation
 ```
@@ -183,18 +197,22 @@ vibe generate --output-path ./backend
 
 ```bash
 # Project Management
-vibe init <project-name>              # Initialize new project
-vibe generate                         # Generate project from docs
-vibe validate tasks.json              # Validate task configuration
+python -m src.cli init <project-name>              # Initialize new project
+python -m src.cli generate                         # Generate project from docs
+python -m src.cli validate tasks.json              # Validate task configuration
 
 # Context Management  
-vibe context stats --project my-app   # Show context statistics
-vibe context compress --strategy hybrid # Force context compression
-vibe context export --file knowledge.json # Export project knowledge
+python -m src.cli context stats --project my-app   # Show context statistics
+python -m src.cli context compress --strategy hybrid # Force context compression
+python -m src.cli context export --file knowledge.json # Export project knowledge
 
 # Monitoring & Status
-vibe monitor --mode web --port 8080   # Start web dashboard
-vibe status --session session_id      # Check execution status
+python -m src.cli monitor --mode web --port 8080   # Start web dashboard
+python -m src.cli status --session session_id      # Check execution status
+
+# Sample and Demo
+python -m src.cli sample --output sample-tasks.json # Generate sample tasks
+python -m src.cli demo-monitoring                   # Run monitoring demo
 ```
 
 ### Configuration
