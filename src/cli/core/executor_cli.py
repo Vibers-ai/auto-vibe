@@ -15,23 +15,30 @@ from shared.utils.config import Config
 from shared.core.schema import TasksPlan, TaskSchemaValidator
 from cli.agents.master_claude_cli_supervisor import MasterClaudeCliSupervisor
 from shared.core.state_manager import ExecutorState
+from shared.core.parallel_executor import ParallelTaskExecutor
+from shared.core.consistency_manager import ConsistencyManager
 
 logger = logging.getLogger(__name__)
 console = Console()
 
 
 class TaskExecutorCli:
-    """Execute tasks using Claude CLI instead of SDK."""
+    """Execute tasks using Claude CLI with parallel processing and consistency management."""
     
-    def __init__(self, config: Config, use_master_supervision: bool = True):
+    def __init__(self, config: Config, use_master_supervision: bool = True, max_parallel_tasks: int = 4):
         self.config = config
         self.use_master_supervision = use_master_supervision
+        self.max_parallel_tasks = max_parallel_tasks
         
         # Initialize Master Claude CLI Supervisor
         if use_master_supervision:
             self.master_supervisor = MasterClaudeCliSupervisor(config)
         else:
             self.master_supervisor = None
+        
+        # Initialize parallel executor and consistency manager
+        self.parallel_executor = ParallelTaskExecutor(config, max_parallel_tasks)
+        self.consistency_manager = ConsistencyManager(config)
         
         # State management
         self.state = ExecutorState()
@@ -41,6 +48,7 @@ class TaskExecutorCli:
         self.start_time = None
         self.completed_tasks = 0
         self.failed_tasks = 0
+        self.use_parallel_execution = True
     
     async def execute_tasks(self, tasks_file: str, workspace_path: str = "output") -> bool:
         """Execute all tasks from the tasks.json file using CLI.
@@ -88,8 +96,32 @@ class TaskExecutorCli:
         )
         
         try:
-            # Execute tasks with CLI supervision
-            success = await self._execute_tasks_with_cli_supervision(tasks_plan, workspace_path)
+            # Initialize consistency patterns from workspace
+            console.print("[blue]🔍 Analyzing workspace for consistency patterns[/blue]")
+            self.consistency_manager.initialize_from_workspace(workspace_path)
+            
+            # Choose execution method based on configuration
+            if self.use_parallel_execution and len(tasks_plan.tasks) > 1:
+                console.print(f"[green]⚡ Using parallel execution with {self.max_parallel_tasks} workers[/green]")
+                success, execution_stats = await self.parallel_executor.execute_tasks_parallel(
+                    tasks_plan, workspace_path
+                )
+                
+                # Update tracking from parallel execution stats
+                self.completed_tasks = execution_stats.completed_tasks
+                self.failed_tasks = execution_stats.failed_tasks
+                
+                # Display parallel execution report
+                self._display_parallel_execution_report(execution_stats)
+                
+            else:
+                console.print("[yellow]📋 Using sequential execution[/yellow]")
+                success = await self._execute_tasks_with_cli_supervision(tasks_plan, workspace_path)
+            
+            # Perform final consistency check
+            console.print("[blue]🔧 Performing final consistency validation[/blue]")
+            consistency_report = await self._perform_final_consistency_check(tasks_plan, workspace_path)
+            self._display_consistency_report(consistency_report)
             
             # Update final session state
             self.state.update_session_status(
@@ -100,7 +132,7 @@ class TaskExecutorCli:
             )
             
             # Display final results
-            self._display_final_results(success, tasks_plan)
+            self._display_final_results(success, tasks_plan, consistency_report)
             
             return success
             
@@ -124,6 +156,184 @@ class TaskExecutorCli:
             # Cleanup
             if self.master_supervisor:
                 self.master_supervisor.cleanup()
+    
+    async def _perform_final_consistency_check(self, tasks_plan: TasksPlan, workspace_path: str) -> Dict[str, Any]:
+        """Perform final consistency check on all generated code."""
+        
+        all_reports = []
+        overall_score = 0
+        total_violations = 0
+        
+        for task in tasks_plan.tasks:
+            try:
+                report = self.consistency_manager.check_task_consistency(task, workspace_path)
+                all_reports.append(report)
+                overall_score += report['consistency_score']
+                total_violations += report['total_violations']
+            except Exception as e:
+                logger.warning(f"Could not check consistency for task {task.id}: {e}")
+        
+        avg_score = overall_score / len(all_reports) if all_reports else 0
+        
+        return {
+            'overall_consistency_score': avg_score,
+            'total_violations': total_violations,
+            'task_reports': all_reports,
+            'recommendations': self._generate_overall_recommendations(all_reports)
+        }
+    
+    def _generate_overall_recommendations(self, reports: List[Dict[str, Any]]) -> List[str]:
+        """Generate overall recommendations from all consistency reports."""
+        
+        all_recommendations = []
+        violation_types = {}
+        
+        for report in reports:
+            all_recommendations.extend(report.get('recommendations', []))
+            
+            for violation_type, count in report.get('violations_by_type', {}).items():
+                violation_types[violation_type] = violation_types.get(violation_type, 0) + count
+        
+        # Generate summary recommendations
+        recommendations = []
+        
+        if violation_types.get('naming_convention', 0) > 5:
+            recommendations.append("Establish and enforce consistent naming conventions across the project")
+        
+        if violation_types.get('coding_style', 0) > 3:
+            recommendations.append("Set up automated code formatting (e.g., Black for Python, Prettier for JS)")
+        
+        if violation_types.get('import_structure', 0) > 2:
+            recommendations.append("Configure import sorting tools (e.g., isort)")
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_recommendations = []
+        for rec in all_recommendations + recommendations:
+            if rec not in seen:
+                seen.add(rec)
+                unique_recommendations.append(rec)
+        
+        return unique_recommendations[:5]  # Top 5 recommendations
+    
+    def _display_parallel_execution_report(self, stats) -> None:
+        """Display parallel execution statistics."""
+        
+        from rich.table import Table
+        from rich.panel import Panel
+        
+        # Create execution summary table
+        table = Table(title="Parallel Execution Summary")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="white")
+        
+        table.add_row("Total Tasks", str(stats.total_tasks))
+        table.add_row("Completed", f"[green]{stats.completed_tasks}[/green]")
+        table.add_row("Failed", f"[red]{stats.failed_tasks}[/red]")
+        table.add_row("Parallel Tasks", str(stats.parallel_tasks_executed))
+        table.add_row("Max Parallel Degree", str(stats.max_parallel_degree))
+        table.add_row("Total Time", f"{stats.total_execution_time:.2f}s")
+        
+        console.print(table)
+        
+        # Display performance insights
+        if hasattr(self.parallel_executor, 'get_execution_report'):
+            report = self.parallel_executor.get_execution_report()
+            insights = report.get('performance_insights', [])
+            
+            if insights:
+                insights_text = "\n".join(f"• {insight}" for insight in insights)
+                console.print(Panel(
+                    insights_text,
+                    title="Performance Insights",
+                    border_style="green"
+                ))
+    
+    def _display_consistency_report(self, consistency_report: Dict[str, Any]) -> None:
+        """Display consistency validation report."""
+        
+        from rich.table import Table
+        from rich.panel import Panel
+        
+        score = consistency_report['overall_consistency_score']
+        violations = consistency_report['total_violations']
+        
+        # Color code the score
+        if score >= 90:
+            score_color = "green"
+            score_icon = "✅"
+        elif score >= 70:
+            score_color = "yellow"
+            score_icon = "⚠️"
+        else:
+            score_color = "red"
+            score_icon = "❌"
+        
+        # Create consistency summary
+        summary_text = f"{score_icon} Consistency Score: [{score_color}]{score:.1f}/100[/{score_color}]\n"
+        summary_text += f"Total Violations: {violations}"
+        
+        console.print(Panel(
+            summary_text,
+            title="Code Consistency Report",
+            border_style=score_color
+        ))
+        
+        # Display recommendations if any
+        recommendations = consistency_report.get('recommendations', [])
+        if recommendations:
+            rec_text = "\n".join(f"• {rec}" for rec in recommendations)
+            console.print(Panel(
+                rec_text,
+                title="Recommendations",
+                border_style="blue"
+            ))
+    
+    def _display_final_results(self, success: bool, tasks_plan: TasksPlan, consistency_report: Dict[str, Any] = None) -> None:
+        """Display enhanced final results with consistency information."""
+        
+        from rich.panel import Panel
+        from rich.table import Table
+        
+        # Execution summary
+        duration = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
+        success_rate = (self.completed_tasks / len(tasks_plan.tasks) * 100) if tasks_plan.tasks else 0
+        
+        # Create results table
+        results_table = Table(title="Execution Results")
+        results_table.add_column("Metric", style="cyan")
+        results_table.add_column("Value", style="white")
+        
+        results_table.add_row("Total Tasks", str(len(tasks_plan.tasks)))
+        results_table.add_row("Completed", f"[green]{self.completed_tasks}[/green]")
+        results_table.add_row("Failed", f"[red]{self.failed_tasks}[/red]")
+        results_table.add_row("Success Rate", f"{success_rate:.1f}%")
+        results_table.add_row("Duration", f"{duration:.2f}s")
+        
+        if consistency_report:
+            score = consistency_report['overall_consistency_score']
+            score_color = "green" if score >= 90 else "yellow" if score >= 70 else "red"
+            results_table.add_row("Consistency Score", f"[{score_color}]{score:.1f}/100[/{score_color}]")
+        
+        console.print(results_table)
+        
+        # Overall status
+        if success:
+            if consistency_report and consistency_report['overall_consistency_score'] >= 90:
+                status_text = "🎉 Project generation completed successfully with excellent code consistency!"
+                status_color = "green"
+            else:
+                status_text = "✅ Project generation completed successfully!"
+                status_color = "green"
+        else:
+            status_text = "❌ Project generation failed. Check logs for details."
+            status_color = "red"
+        
+        console.print(Panel(
+            status_text,
+            border_style=status_color,
+            title="Final Status"
+        ))
     
     def _create_session_id(self, tasks_plan: TasksPlan) -> str:
         """Create a unique session ID."""

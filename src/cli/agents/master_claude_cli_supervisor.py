@@ -17,6 +17,7 @@ from shared.agents.context_manager import ContextManager, ContextCompressionStra
 from shared.utils.api_manager import api_manager, APIProvider
 from shared.utils.response_validator import validate_ai_response
 from shared.utils.recovery_manager import get_recovery_manager, TaskStatus
+from shared.core.consistency_manager import ConsistencyManager
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -25,7 +26,7 @@ console = Console()
 class MasterClaudeCliSupervisor:
     """Master Claude that supervises and guides Code Claude CLI execution."""
     
-    def __init__(self, config: Config, max_context_tokens: int = 128000):
+    def __init__(self, config: Config, max_context_tokens: int = 128000, enable_monitoring: bool = False):
         self.config = config
         self.gemini_model = None
         self.aci = ACIInterface()
@@ -37,6 +38,9 @@ class MasterClaudeCliSupervisor:
         # Context management
         self.context_manager = ContextManager(config, max_context_tokens)
         self.max_context_tokens = max_context_tokens
+        
+        # Initialize consistency manager
+        self.consistency_manager = ConsistencyManager(config)
         
         # Enhanced Code Claude CLI management
         self.persistent_cli_sessions = PersistentClaudeCliSession(config)
@@ -54,6 +58,15 @@ class MasterClaudeCliSupervisor:
             'architectural_decisions': [],
             'cli_specific_patterns': []
         }
+        
+        # Monitoring (optional)
+        self.monitor = None
+        if enable_monitoring:
+            try:
+                from shared.monitoring.master_claude_monitor import MasterClaudeMonitor
+                self.monitor = MasterClaudeMonitor(config)
+            except ImportError:
+                logger.warning("Monitoring not available")
     
     def _setup_gemini(self):
         """Initialize Gemini model for master supervision."""
@@ -146,8 +159,11 @@ class MasterClaudeCliSupervisor:
         # Determine target workspace
         target_workspace = "frontend" if "fe-" in task.id or "frontend" in task.project_area.lower() else "backend"
         
-        # Create structure-aware analysis prompt
-        analysis_prompt = f"""Analyze task for Claude CLI execution. Focus on correct workspace structure.
+        # Generate consistency guidelines for this task
+        consistency_prompt = self.consistency_manager.generate_consistency_prompt(task, workspace_path)
+        
+        # Create enhanced analysis prompt with consistency guidance
+        analysis_prompt = f"""Analyze task for Claude CLI execution with consistency enforcement.
 
 **CONTEXT:** {managed_context}
 
@@ -157,19 +173,27 @@ class MasterClaudeCliSupervisor:
 **TARGET WORKSPACE:** {target_workspace}/
 **FILES TO CREATE:** {', '.join(task.files_to_create_or_modify)}
 
-**CRITICAL:** Ensure all files go in {target_workspace}/ workspace. Prevent structure errors.
+**CONSISTENCY REQUIREMENTS:**
+{consistency_prompt}
+
+**CRITICAL REQUIREMENTS:**
+1. Ensure all files go in {target_workspace}/ workspace
+2. Follow established naming conventions and coding patterns
+3. Maintain architectural consistency with existing code
+4. Use consistent import patterns and code organization
 
 **JSON OUTPUT:**
 ```json
 {{
     "situation_analysis": "Current state and target workspace analysis",
     "execution_strategy": "Implementation approach for {target_workspace}/ workspace", 
+    "consistency_guidelines": "Specific patterns and conventions to follow",
     "step_by_step_plan": [
         {{"step": 1, "action": "Check current directory with pwd", "verification": "Confirm correct location"}},
         {{"step": 2, "action": "Navigate to {target_workspace}/ if needed", "verification": "pwd shows correct path"}},
-        {{"step": 3, "action": "Main implementation task", "verification": "Files created in correct location"}}
+        {{"step": 3, "action": "Main implementation task", "verification": "Files created in correct location and follow patterns"}}
     ],
-    "code_claude_cli_instructions": "Specific instructions ensuring correct workspace usage"
+    "code_claude_cli_instructions": "Specific instructions ensuring correct workspace usage and consistency"
 }}
 ```"""
 

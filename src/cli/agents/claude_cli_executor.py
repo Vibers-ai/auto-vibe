@@ -18,6 +18,208 @@ from shared.tools.aci_interface import ACIInterface
 logger = logging.getLogger(__name__)
 
 
+class ClaudeCliExecutor:
+    """Enhanced Claude CLI Executor with worker pool support."""
+    
+    def __init__(self, config: Config, worker_id: str = "default"):
+        self.config = config
+        self.worker_id = worker_id
+        self.aci = ACIInterface()
+        self.completion_detector = ClaudeCompletionDetector()
+        self.execution_stats = {
+            'tasks_executed': 0,
+            'total_execution_time': 0.0,
+            'successful_tasks': 0,
+            'failed_tasks': 0
+        }
+        logger.info(f"Claude CLI Executor {worker_id} initialized")
+    
+    async def execute_task_with_curated_context(
+        self,
+        task: Task,
+        workspace_path: str,
+        curated_context: str,
+        timeout: int = 600
+    ) -> Dict[str, Any]:
+        """Execute a task using Claude CLI with curated context."""
+        
+        start_time = time.time()
+        logger.info(f"Worker {self.worker_id} executing task {task.id}")
+        
+        try:
+            # Prepare CLI prompt
+            cli_prompt = self._create_cli_prompt(task, workspace_path, curated_context)
+            
+            # Execute with Claude CLI
+            result = await self._execute_claude_cli(cli_prompt, workspace_path, timeout)
+            
+            # Update stats
+            execution_time = time.time() - start_time
+            self.execution_stats['tasks_executed'] += 1
+            self.execution_stats['total_execution_time'] += execution_time
+            
+            if result.get('success', False):
+                self.execution_stats['successful_tasks'] += 1
+            else:
+                self.execution_stats['failed_tasks'] += 1
+            
+            result['worker_id'] = self.worker_id
+            result['execution_time'] = execution_time
+            
+            return result
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            self.execution_stats['failed_tasks'] += 1
+            self.execution_stats['total_execution_time'] += execution_time
+            
+            logger.error(f"Worker {self.worker_id} failed to execute task {task.id}: {e}")
+            
+            return {
+                'success': False,
+                'error': str(e),
+                'worker_id': self.worker_id,
+                'execution_time': execution_time,
+                'task_id': task.id
+            }
+    
+    def _create_cli_prompt(self, task: Task, workspace_path: str, curated_context: str) -> str:
+        """Create optimized CLI prompt for task execution."""
+        
+        prompt = f"""You are Code Claude, an expert software developer working via CLI.
+
+**WORKSPACE:** {workspace_path}
+**TASK ID:** {task.id}
+**TASK TYPE:** {task.type}
+**PROJECT AREA:** {task.project_area}
+
+**MASTER'S CURATED CONTEXT:**
+{curated_context}
+
+**TASK DESCRIPTION:**
+{task.description}
+
+**FILES TO CREATE/MODIFY:**
+{', '.join(task.files_to_create_or_modify)}
+
+**ACCEPTANCE CRITERIA:**
+{json.dumps(task.acceptance_criteria.dict() if hasattr(task.acceptance_criteria, 'dict') else task.acceptance_criteria, indent=2)}
+
+**DEPENDENCIES (COMPLETED):**
+{', '.join(task.dependencies) if task.dependencies else 'None'}
+
+**TECHNICAL DETAILS:**
+{json.dumps(task.technical_details.dict() if hasattr(task.technical_details, 'dict') else task.technical_details or {}, indent=2)}
+
+**INSTRUCTIONS:**
+1. Follow the exact task description and acceptance criteria
+2. Use the curated context to maintain consistency with the project
+3. Create/modify only the specified files
+4. Follow established patterns and conventions from the context
+5. Write clean, well-documented, production-ready code
+6. Run tests if specified in acceptance criteria
+7. Signal completion clearly when done
+
+**COMPLETION SIGNAL:**
+When the task is fully complete, output: "TASK IMPLEMENTATION COMPLETE"
+
+Begin implementation now:
+"""
+        return prompt
+    
+    async def _execute_claude_cli(
+        self, 
+        prompt: str, 
+        workspace_path: str, 
+        timeout: int
+    ) -> Dict[str, Any]:
+        """Execute Claude CLI with the given prompt."""
+        
+        # Create temporary prompt file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+            f.write(prompt)
+            prompt_file = f.name
+        
+        try:
+            # Prepare Claude CLI command
+            cmd = [
+                "claude",
+                "--headless",
+                "--project", workspace_path,
+                "--file", prompt_file
+            ]
+            
+            # Execute Claude CLI process
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=workspace_path
+            )
+            
+            # Monitor output for completion
+            stdout_lines = []
+            stderr_lines = []
+            completion_detected = False
+            
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=timeout
+                )
+                
+                if stdout:
+                    stdout_text = stdout.decode('utf-8', errors='ignore')
+                    stdout_lines = stdout_text.split('\n')
+                    
+                    # Check for completion signals
+                    for line in stdout_lines:
+                        detection_result = self.completion_detector.analyze_output(line)
+                        if detection_result.get('completion_found'):
+                            completion_detected = True
+                            break
+                
+                if stderr:
+                    stderr_text = stderr.decode('utf-8', errors='ignore')
+                    stderr_lines = stderr_text.split('\n')
+                
+                # Process completed successfully
+                success = process.returncode == 0 or completion_detected
+                
+                return {
+                    'success': success,
+                    'returncode': process.returncode,
+                    'stdout': stdout_lines,
+                    'stderr': stderr_lines,
+                    'completion_detected': completion_detected,
+                    'completion_signals': self.completion_detector.completion_signals
+                }
+                
+            except asyncio.TimeoutError:
+                # Kill the process if it times out
+                process.kill()
+                await process.wait()
+                
+                return {
+                    'success': False,
+                    'error': f'Claude CLI execution timed out after {timeout} seconds',
+                    'timeout': True
+                }
+        
+        finally:
+            # Clean up temporary file
+            try:
+                os.unlink(prompt_file)
+            except Exception:
+                pass
+    
+    def get_worker_stats(self) -> Dict[str, Any]:
+        """Get worker execution statistics."""
+        return {
+            'worker_id': self.worker_id,
+            'stats': self.execution_stats.copy()
+        }
+
+
 class ClaudeCompletionDetector:
     """Detect Claude CLI completion signals from output messages."""
     
