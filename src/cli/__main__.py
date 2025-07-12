@@ -13,6 +13,6 @@ if __name__ == "__main__":
     src_dir = Path(__file__).parent.parent
     sys.path.insert(0, str(src_dir))
     
-    # cli.py의 main 함수 실행
-    from src.cli import main
+    # cli.py의 main 함수 직접 실행
+    from cli import main
     main()

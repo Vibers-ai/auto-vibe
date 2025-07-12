@@ -22,8 +22,6 @@ sys.path.insert(0, str(src_dir))
 from shared.utils.config import Config
 from shared.agents.document_ingestion import DocumentIngestionAgent
 from shared.agents.master_planner import MasterPlannerAgent
-from cli.core.executor_cli import TaskExecutorCli
-from shared.core.schema import create_sample_tasks, TaskSchemaValidator
 
 app = typer.Typer(name="vibe", help="VIBE - Autonomous Coding Agent")
 console = Console()
@@ -114,6 +112,7 @@ async def run_generation_pipeline(
             console.print(f"[red]Error: {tasks_path} not found[/red]")
             return
         
+        from shared.core.schema import TaskSchemaValidator
         validated_plan = TaskSchemaValidator.validate_file(tasks_path)
         if validated_plan is None:
             console.print(f"[red]Error: Invalid tasks.json file[/red]")
@@ -121,6 +120,7 @@ async def run_generation_pipeline(
     
     # Phase 3: Task Execution
     console.print("\n[blue]Phase 3: Task Execution & Code Generation[/blue]")
+    from cli.core.executor_cli import TaskExecutorCli
     executor = TaskExecutorCli(config)
     
     try:
@@ -146,6 +146,7 @@ def validate(
     """Validate a tasks.json file."""
     console.print(f"[blue]Validating {tasks_file}...[/blue]")
     
+    from shared.core.schema import TaskSchemaValidator
     validated_plan = TaskSchemaValidator.validate_file(tasks_file)
     
     if validated_plan:
@@ -173,6 +174,7 @@ def sample(
     """Generate a sample tasks.json file for reference."""
     console.print("[blue]Generating sample tasks.json...[/blue]")
     
+    from shared.core.schema import create_sample_tasks
     sample_plan = create_sample_tasks()
     
     with open(output_file, 'w', encoding='utf-8') as f:

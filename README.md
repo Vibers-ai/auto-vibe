@@ -109,42 +109,178 @@ cp ../.env.example .env
 # LOG_LEVEL=INFO
 ```
 
-### Generate Your First Project
+### Complete Project Setup and Execution
 
+#### Step 1: Initialize Your Project
 ```bash
-# Add your project documentation to docs/ folder
-# (PDFs, Word docs, images, markdown files)
+# Create a new VIBE project
+python src/cli.py init my-awesome-project
 
-# Generate complete software project
-python -m src.cli generate
+# Navigate to your project directory
+cd my-awesome-project
 
-# Monitor progress (optional)
-python -m src.cli monitor --mode web --port 8080
+# Copy environment configuration template
+cp ../.env.example .env
 
-# Check status
-python -m src.cli status
+# Edit .env with your actual API keys
+nano .env  # or use your preferred editor
+```
 
-# Validate tasks (if needed)
-python -m src.cli validate tasks.json
+#### Step 2: Configure API Keys
+Edit the `.env` file with your actual API keys:
+```env
+# Required API Keys
+GEMINI_API_KEY=your_actual_gemini_api_key_here
+ANTHROPIC_API_KEY=your_actual_claude_api_key_here
+
+# Optional: Adjust parallel processing
+PARALLEL_TASKS=4
+MAX_RETRIES=3
+TASK_TIMEOUT=600
+```
+
+**Get Your API Keys:**
+- **Gemini API**: Visit [Google AI Studio](https://makersuite.google.com/)
+- **Claude API**: Visit [Anthropic Console](https://console.anthropic.com/)
+
+#### Step 3: Add Your Project Documentation
+```bash
+# Add documentation to the docs/ folder
+docs/
+├── business_requirements.pdf       # Business specifications
+├── technical_specifications.docx   # Technical details
+├── api_documentation.md           # API requirements
+├── ui_mockups.png                 # UI/UX designs
+├── database_schema.md             # Data models
+└── project_overview.txt           # General overview
+```
+
+#### Step 4: Generate Your Project
+```bash
+# Basic generation (uses ./docs and outputs to ./output)
+python ../src/cli.py generate
+
+# Custom paths and options
+python ../src/cli.py generate \
+    --docs ./documentation \
+    --output ./generated_code \
+    --log-level DEBUG
+
+# Skip planning phase (use existing tasks.json)
+python ../src/cli.py generate --skip-planning
+
+# Generate with specific environment file
+python ../src/cli.py generate --env ./production.env
+```
+
+#### Step 5: Monitor Progress (Optional)
+```bash
+# Start web monitoring dashboard
+python ../src/cli.py monitor --mode web --port 8080
+# Visit: http://localhost:8080
+
+# Start terminal monitoring
+python ../src/cli.py monitor --mode terminal
+
+# Start both monitoring modes
+python ../src/cli.py monitor --mode both
+```
+
+#### Step 6: Manage Your Project
+```bash
+# Check execution status
+python ../src/cli.py status --session latest
+
+# Validate task configuration
+python ../src/cli.py validate tasks.json
+
+# Export project knowledge for reuse
+python ../src/cli.py context export --file project_knowledge.json
+
+# Check defense system status
+python ../src/cli.py defense status
+
+# Run system diagnostics
+python ../src/cli.py defense diagnostics
 ```
 
 ---
 
 ## 🏗️ **Architecture**
 
-### Master Claude + Code Claude System
+### VIBE Advanced Architecture with Defense Systems
 
 ```mermaid
-graph TD
-    A[📄 Project Docs] --> B[🔍 Document Ingestion]
-    B --> C[🧠 Master Planner - Gemini]
-    C --> D[📋 Task Generation]
-    D --> E[👑 Master Claude Supervisor]
-    E --> F[⚡ Code Claude CLI Executor]
-    F --> G[📊 Context Manager]
-    G --> E
-    E --> H[✅ Quality Assurance]
-    H --> I[🚀 Generated Project]
+graph TB
+    %% Input Layer
+    A[📄 Project Documents] --> B[🔍 Document Ingestion Agent]
+    A1[📋 PDF/DOCX/MD Files] --> B
+    A2[🖼️ UI Mockups] --> B
+    A3[📝 Requirements] --> B
+    
+    %% Master Planning Layer
+    B --> C[🧠 Master Planner - Gemini 2.0]
+    C --> D[📊 Task Dependency Analysis]
+    D --> E[🗂️ Task Generation & DAG]
+    
+    %% Defense System Layer
+    E --> F{🛡️ Defense System}
+    F --> F1[🔒 Process Manager]
+    F --> F2[⚡ Deadlock Detector] 
+    F --> F3[🚨 Circuit Breakers]
+    F --> F4[📁 File Operation Guard]
+    F --> F5[💾 Token Overflow Guard]
+    F --> F6[🏥 Health Monitor]
+    
+    %% Execution Layer
+    F --> G[👑 Master Claude Supervisor]
+    G --> H[🔄 Parallel Task Orchestrator]
+    H --> I[⚡ Code Claude CLI Pool]
+    I --> I1[🤖 Claude Worker 1]
+    I --> I2[🤖 Claude Worker 2] 
+    I --> I3[🤖 Claude Worker 3]
+    I --> I4[🤖 Claude Worker 4]
+    
+    %% Context Management
+    G --> J[🧠 Context Manager]
+    J --> J1[📝 Summarization]
+    J --> J2[🏗️ Hierarchical]
+    J --> J3[🪟 Sliding Window]
+    J --> J4[🎯 Semantic Filtering]
+    J --> J5[🔄 Hybrid Strategy]
+    
+    %% Output Layer
+    I1 --> K[✅ Code Generation]
+    I2 --> K
+    I3 --> K  
+    I4 --> K
+    K --> L[🔍 Quality Assurance]
+    L --> M[🚀 Complete Project]
+    
+    %% Monitoring Layer
+    G --> N[📊 Real-time Monitoring]
+    N --> N1[🖥️ Terminal Dashboard]
+    N --> N2[🌐 Web Dashboard]
+    N --> N3[📈 Health Metrics]
+    
+    %% Recovery System
+    F --> O[💾 Recovery System]
+    O --> O1[🔄 Checkpoints]
+    O --> O2[📋 Session Persistence]
+    O --> O3[🆘 Emergency Reset]
+    
+    %% Styling
+    classDef inputStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef defenseStyle fill:#fff3e0,stroke:#e65100,stroke-width:3px
+    classDef executionStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef outputStyle fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef monitorStyle fill:#fff8e1,stroke:#ff6f00,stroke-width:2px
+    
+    class A,A1,A2,A3,B inputStyle
+    class F,F1,F2,F3,F4,F5,F6,O,O1,O2,O3 defenseStyle
+    class G,H,I,I1,I2,I3,I4,J,J1,J2,J3,J4,J5 executionStyle
+    class K,L,M outputStyle
+    class N,N1,N2,N3 monitorStyle
 ```
 
 ### Core Components
@@ -186,50 +322,173 @@ graph TD
 - **Best Practices**: Automated testing, linting, documentation
 - **Quality Assurance**: Multi-layer validation and verification
 
-### 🛡️ **Defense & Security Systems**
-- **Process Management**: Central child process tracking and cleanup
-- **Deadlock Detection**: Multi-type deadlock prevention and recovery
-- **Circuit Breakers**: API failure protection with exponential backoff
-- **File Operation Guards**: Concurrent file modification prevention
-- **Health Monitoring**: Real-time system health checks and auto-recovery
+### 🛡️ **Advanced Defense & Security Systems**
+- **🔒 Central Process Management**: Unified child process tracking with automatic cleanup and orphan detection
+- **⚡ Multi-Type Deadlock Detection**: Dependency cycle, resource contention, and worker pool deadlock prevention
+- **🚨 Intelligent Circuit Breakers**: API failure protection with exponential backoff and health tracking
+- **📁 File Operation Guards**: fcntl-based concurrent file modification prevention with exclusive/shared locks
+- **💾 Token Overflow Protection**: Real-time monitoring with 5-strategy compression and emergency cleanup
+- **🏥 System Health Monitoring**: Comprehensive health checks for memory, CPU, disk, and system resources
+- **🆘 Emergency Recovery**: Automatic system reset and cleanup capabilities
 
-### 🎛️ **Management & Monitoring**
-- **Session Persistence**: Resume interrupted executions
-- **Recovery System**: Automatic checkpoint-based recovery
-- **Real-time Dashboard**: Web-based progress monitoring with health metrics
-- **CLI Tools**: Comprehensive command-line interface
+### 🔄 **Parallel Processing Engine**
+- **📊 DAG-Based Task Orchestration**: NetworkX-powered dependency graph analysis and topological sorting
+- **⚡ Intelligent Worker Pool**: Dynamic Claude CLI worker management with health monitoring
+- **🎯 Batch Optimization**: Type-based task grouping for maximum parallelization efficiency
+- **🔄 Semaphore-Controlled Execution**: Configurable concurrency limits with resource management
+- **📈 Real-time Performance Metrics**: Execution statistics and parallelization efficiency tracking
+
+### 🧠 **Context Management System**
+- **💡 5-Strategy Compression**: Summarization, Hierarchical, Sliding Window, Semantic Filtering, and Hybrid approaches
+- **📚 Project Memory**: Persistent knowledge base with task completion tracking
+- **🎯 Relevance-Based Context**: Smart context selection based on task dependencies and importance
+- **🔄 Automatic Optimization**: Dynamic context compression with overflow protection
+- **💾 Session Persistence**: Context state export/import for project continuity
+
+### 🎛️ **Monitoring & Management**
+- **🌐 Dual Dashboard System**: Rich terminal interface and web-based monitoring
+- **📊 Real-time Metrics**: Live progress tracking, health status, and performance analytics
+- **🔔 Intelligent Alerting**: Critical issue detection with automatic notification
+- **💾 Checkpoint Recovery**: Automatic session persistence with failure recovery
+- **🛠️ CLI Management Tools**: Comprehensive command-line interface with advanced options
 
 ---
 
 ## 🎯 **Examples**
 
-### Example 1: E-commerce Platform
+### Example 1: Full-Stack E-commerce Platform
 
 ```bash
-# Create project from business requirements document
-python -m src.cli init ecommerce-platform
+# Initialize project
+python src/cli.py init ecommerce-platform
 cd ecommerce-platform
 
-# Add your docs/
-# - business_requirements.pdf
-# - ui_mockups.png
-# - api_specifications.md
+# Setup environment
+cp ../.env.example .env
+# Edit .env with your API keys
 
-python -m src.cli generate
-# ✅ Generates: React frontend, Node.js backend, PostgreSQL database, tests
+# Add comprehensive documentation
+docs/
+├── business_requirements.pdf    # Business logic and requirements
+├── ui_mockups.png              # Frontend design mockups
+├── api_specifications.md       # REST API documentation
+├── database_schema.md          # Data models and relationships
+└── technical_architecture.docx # System architecture details
+
+# Generate with monitoring
+python ../src/cli.py generate --log-level INFO &
+python ../src/cli.py monitor --mode web --port 8080
+
+# ✅ Generated Output:
+output/
+├── frontend/                   # React.js application
+│   ├── src/components/        # Reusable components
+│   ├── src/pages/            # Page components
+│   ├── src/store/            # State management
+│   └── package.json          # Dependencies
+├── backend/                   # Node.js/Express API
+│   ├── routes/               # API endpoints
+│   ├── models/               # Database models
+│   ├── middleware/           # Authentication, validation
+│   └── tests/                # API tests
+├── database/                 # PostgreSQL setup
+│   ├── migrations/           # Schema migrations
+│   └── seeds/                # Initial data
+└── deployment/               # Docker, CI/CD configs
+    ├── Dockerfile
+    ├── docker-compose.yml
+    └── .github/workflows/
 ```
 
-### Example 2: Mobile App Backend
+### Example 2: Mobile App Backend with Advanced Features
 
 ```bash
-# Generate API backend from mobile app specs
-python -m src.cli init mobile-api
-cd mobile-api
+# Initialize with custom configuration
+python src/cli.py init mobile-api-backend
+cd mobile-api-backend
 
-# Add docs/mobile_app_spec.docx with API requirements
-python -m src.cli generate --output-path ./backend
+# Setup environment with custom settings
+cp ../.env.example .env
+# Edit .env:
+# PARALLEL_TASKS=6
+# CONTEXT_COMPRESSION_STRATEGY=HYBRID
+# ENABLE_MONITORING=true
 
-# ✅ Generates: FastAPI backend, authentication, database models, documentation
+# Add mobile app specifications
+docs/
+├── mobile_app_requirements.docx # App functionality details
+├── api_endpoints.md            # Detailed API specifications
+├── user_flow_diagrams.png      # User interaction flows
+├── security_requirements.pdf   # Authentication & security
+└── performance_specs.md        # Performance requirements
+
+# Generate with custom output and monitoring
+python ../src/cli.py generate \
+    --docs ./docs \
+    --output ./api_server \
+    --log-level DEBUG
+
+python ../src/cli.py monitor --mode both
+
+# ✅ Generated Output:
+api_server/
+├── src/
+│   ├── auth/                  # JWT authentication system
+│   ├── api/                   # REST API endpoints
+│   ├── services/              # Business logic services
+│   ├── models/                # Database models (Prisma/TypeORM)
+│   ├── middleware/            # Rate limiting, validation
+│   ├── utils/                 # Helper functions
+│   └── tests/                 # Comprehensive test suite
+├── docs/                      # Auto-generated API docs
+├── deployment/                # Cloud deployment configs
+└── monitoring/                # Health checks, metrics
+```
+
+### Example 3: Microservices Architecture
+
+```bash
+# Initialize complex microservices project
+python src/cli.py init microservices-platform
+cd microservices-platform
+
+# Add comprehensive architecture documentation
+docs/
+├── system_architecture.pdf    # Overall system design
+├── service_specifications/    # Individual service specs
+│   ├── user_service.md
+│   ├── order_service.md
+│   ├── payment_service.md
+│   └── notification_service.md
+├── database_design.md         # Database strategy
+├── api_gateway_config.md      # Gateway configuration
+└── deployment_strategy.pdf    # Infrastructure requirements
+
+# Generate with maximum parallelization
+python ../src/cli.py generate \
+    --docs ./docs \
+    --output ./microservices \
+    --log-level INFO
+
+# Monitor complex execution
+python ../src/cli.py monitor --mode web --port 8080
+
+# Check defense system status during execution
+python ../src/cli.py defense status
+python ../src/cli.py defense diagnostics
+
+# ✅ Generated Output:
+microservices/
+├── services/
+│   ├── user-service/          # User management microservice
+│   ├── order-service/         # Order processing microservice
+│   ├── payment-service/       # Payment handling microservice
+│   └── notification-service/  # Notification microservice
+├── api-gateway/               # Kong/Express gateway
+├── shared/                    # Shared libraries and types
+├── infrastructure/            # Kubernetes, Terraform
+├── monitoring/                # Prometheus, Grafana configs
+└── scripts/                   # Deployment and utility scripts
 ```
 
 ---
@@ -255,12 +514,32 @@ python -m src.cli monitor --mode terminal          # Start terminal dashboard
 python -m src.cli status --session session_id      # Check execution status
 
 # Defense System Management
-python -m src.cli defense status                   # Check defense system status
-python -m src.cli defense diagnostics              # Run comprehensive diagnostics
-python -m src.cli defense reset                    # Emergency system reset
+python src/cli.py defense status                   # Check defense system status
+python src/cli.py defense diagnostics              # Run comprehensive diagnostics
+python src/cli.py defense reset                    # Emergency system reset
+
+# Advanced Context Management
+python src/cli.py context stats --project my-app   # Detailed context statistics
+python src/cli.py context compress --strategy hybrid # Manual context compression
+python src/cli.py context export --file backup.json # Export project knowledge
+python src/cli.py context import --file backup.json # Import project knowledge
+python src/cli.py context preview --task task-001  # Preview context for specific task
 
 # Sample and Demo
-python -m src.cli sample --output sample-tasks.json # Generate sample tasks
+python src/cli.py sample --output sample-tasks.json # Generate sample tasks
+python src/cli.py demo-monitoring                   # Run monitoring demonstration
+
+# Direct Execution (Alternative Methods)
+# Using PYTHONPATH
+PYTHONPATH=src python src/cli.py generate
+
+# Using environment variable
+export PYTHONPATH="/path/to/auto-vibe/src:$PYTHONPATH"
+python src/cli.py generate
+
+# Using the vibe command (if installed with pip install -e .)
+vibe generate
+vibe monitor --mode web
 ```
 
 ### Configuration
@@ -435,6 +714,55 @@ python -m src.cli generate --debug
 
 # Check logs
 tail -f output/logs/session_*.md
+```
+
+#### 6. CLI Execution Issues
+
+```bash
+# Issue: Cannot import name 'main' from 'src.cli'
+# Solution: Use direct CLI execution
+cd auto-vibe
+python src/cli.py --help
+
+# Alternative: Set PYTHONPATH
+export PYTHONPATH="/home/user/auto-vibe/src:$PYTHONPATH"
+python src/cli.py generate
+
+# Alternative: Use editable install
+pip install -e .
+vibe --help
+```
+
+#### 7. Import Path and Circular Import Errors
+
+```bash
+# Issue: Circular import or module not found errors
+# Solution: Use direct script execution
+python src/cli.py generate
+
+# Avoid: python -m src.cli generate (may cause circular imports)
+# Use: python src/cli.py generate (direct execution)
+
+# Check current directory structure
+ls -la src/
+ls -la src/cli/
+
+# Verify you're in the correct directory
+pwd  # Should show /path/to/auto-vibe
+```
+
+#### 8. Performance and Resource Issues
+
+```bash
+# Issue: High memory usage or slow execution
+# Solution: Adjust parallel processing settings
+export PARALLEL_TASKS=2
+export CONTEXT_COMPRESSION_STRATEGY=HYBRID
+export MAX_CONTEXT_TOKENS=64000
+
+# Monitor resource usage
+python src/cli.py defense diagnostics
+python src/cli.py monitor --mode terminal
 ```
 
 ---
