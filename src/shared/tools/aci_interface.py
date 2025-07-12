@@ -9,6 +9,8 @@ from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass
 import logging
 
+from shared.core.process_manager import create_managed_subprocess_shell
+
 logger = logging.getLogger(__name__)
 
 
@@ -125,8 +127,10 @@ class ACIInterface:
         try:
             logger.info(f"Running command in {working_dir}: {command}")
             
-            process = await asyncio.create_subprocess_shell(
+            process = await create_managed_subprocess_shell(
                 command,
+                creator="aci_interface.run_command",
+                timeout=self.timeout,
                 cwd=working_dir,
                 stdout=subprocess.PIPE if capture_output else None,
                 stderr=subprocess.PIPE if capture_output else None

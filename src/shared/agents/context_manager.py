@@ -24,6 +24,8 @@ import google.generativeai as genai
 from shared.utils.config import Config
 from shared.core.schema import Task, TasksPlan
 from shared.utils.file_utils import write_json_file, read_json_file
+from shared.core.token_overflow_guard import global_token_guard
+from shared.core.circuit_breaker import global_circuit_breaker_manager, GEMINI_CIRCUIT_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -96,15 +98,34 @@ class ContextManager:
         # Rough estimation: 1 token ≈ 4 characters for English text
         return len(text) // 4
     
-    def add_context(self, content: str, content_type: str, 
-                   task_ids: List[str] = None, importance: float = 0.5) -> None:
-        """Add new context to the manager."""
+    async def add_context(self, content: str, content_type: str, 
+                         task_ids: List[str] = None, importance: float = 0.5) -> None:
+        """Add new context to the manager with overflow protection."""
         if task_ids is None:
             task_ids = []
         
+        # 토큰 추정
+        estimated_tokens = self.estimate_tokens(content)
+        
+        # 토큰 오버플로우 체크 및 압축
+        current_tokens = sum(cw.token_count for cw in self.context_windows)
+        can_add = await global_token_guard.check_and_compress_if_needed(
+            self, estimated_tokens
+        )
+        
+        if not can_add:
+            logger.warning(f"Cannot add context due to token overflow protection. "
+                          f"Current: {current_tokens}, Adding: {estimated_tokens}")
+            # 강제 압축 시도
+            try:
+                await self._emergency_context_reduction()
+            except Exception as e:
+                logger.error(f"Emergency context reduction failed: {e}")
+                raise RuntimeError("Context overflow - unable to add new content")
+        
         context_window = ContextWindow(
             content=content,
-            token_count=self.estimate_tokens(content),
+            token_count=estimated_tokens,
             importance_score=importance,
             timestamp=datetime.now(),
             content_type=content_type,
@@ -112,11 +133,29 @@ class ContextManager:
         )
         
         self.context_windows.append(context_window)
-        logger.info(f"Added context: {content_type}, tokens: {context_window.token_count}")
         
-        # Check if compression is needed
-        if self._needs_compression():
-            asyncio.create_task(self._compress_context())
+        # 토큰 사용량 업데이트
+        new_total = sum(cw.token_count for cw in self.context_windows)
+        global_token_guard.update_token_usage(new_total)
+        
+        logger.info(f"Added context: {content_type}, tokens: {estimated_tokens} "
+                   f"(total: {new_total})")
+    
+    async def _emergency_context_reduction(self):
+        """긴급 컨텍스트 감축"""
+        logger.warning("Performing emergency context reduction")
+        
+        # 가장 오래되고 중요하지 않은 컨텍스트 제거
+        sorted_contexts = sorted(
+            self.context_windows,
+            key=lambda cw: (cw.importance_score, cw.timestamp)
+        )
+        
+        # 절반까지 감축
+        target_count = len(sorted_contexts) // 2
+        self.context_windows = sorted_contexts[-target_count:]
+        
+        logger.warning(f"Emergency reduction: kept {target_count} out of {len(sorted_contexts)} contexts")
     
     def _needs_compression(self) -> bool:
         """Check if context compression is needed."""
@@ -250,9 +289,15 @@ Provide a concise but comprehensive summary that captures the essential informat
             logger.error(f"Error creating summary for group '{group_key}': {e}")
     
     async def _generate_summary(self, prompt: str) -> str:
-        """Generate summary using Gemini."""
+        """Generate summary using Gemini with circuit breaker protection."""
         try:
-            response = self.gemini_model.generate_content(
+            # 서킷 브레이커를 통한 보호된 호출
+            circuit_breaker = global_circuit_breaker_manager.get_circuit_breaker(
+                "gemini_summarization", GEMINI_CIRCUIT_CONFIG
+            )
+            
+            response = await circuit_breaker.call(
+                self.gemini_model.generate_content,
                 prompt,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.3,  # Lower temperature for consistent summaries

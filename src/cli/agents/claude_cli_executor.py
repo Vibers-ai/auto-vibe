@@ -13,6 +13,7 @@ from pathlib import Path
 
 from shared.utils.config import Config
 from shared.core.schema import Task, TasksPlan
+from shared.core.process_manager import create_managed_subprocess_exec, global_process_manager, terminate_managed_process
 from shared.tools.aci_interface import ACIInterface
 
 logger = logging.getLogger(__name__)
@@ -149,9 +150,11 @@ Begin implementation now:
                 "--file", prompt_file
             ]
             
-            # Execute Claude CLI process
-            process = await asyncio.create_subprocess_exec(
+            # Execute Claude CLI process with managed process manager
+            process = await create_managed_subprocess_exec(
                 *cmd,
+                creator="claude_cli_executor.execute_with_cli",
+                timeout=timeout,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=workspace_path
@@ -195,9 +198,9 @@ Begin implementation now:
                 }
                 
             except asyncio.TimeoutError:
-                # Kill the process if it times out
-                process.kill()
-                await process.wait()
+                # Process timeout is handled by process manager
+                logger.warning(f"Claude CLI execution timed out for process PID {process.pid}")
+                # Process manager will automatically terminate timed-out processes
                 
                 return {
                     'success': False,
@@ -711,8 +714,10 @@ Begin implementation:"""
                 logger.warning(f"Claude CLI test command failed: {e}")
             
             # Execute CLI process without stdin (command-line prompt)
-            process = await asyncio.create_subprocess_exec(
+            process = await create_managed_subprocess_exec(
                 *cmd,
+                creator="claude_cli_executor.execute_direct_prompt",
+                timeout=300.0,  # 5분 타임아웃
                 cwd=workspace_path,
                 env=env,
                 stdout=asyncio.subprocess.PIPE,
@@ -743,7 +748,7 @@ Begin implementation:"""
                         activity = fs_monitor.get_activity_summary()
                         yield f"TIMEOUT: Claude CLI execution exceeded {timeout_seconds} seconds"
                         yield f"Final activity: {activity['files_created']} files, {activity['dirs_created']} dirs created"
-                        process.terminate()
+                        await terminate_managed_process(process.pid)
                         break
                     
                     # Periodic file system check
@@ -777,18 +782,18 @@ Begin implementation:"""
                             if has_claude_completion and activity['files_created'] >= 1:
                                 yield f"🎯 Combined completion: Claude signals ({len(claude_signals)}) + files created ({activity['files_created']})"
                                 yield f"⚡ Confident completion detected - terminating process"
-                                process.terminate()
+                                await terminate_managed_process(process.pid)
                                 break
                             elif activity['completion_signals'] >= 3:  # Pure file system signals
                                 yield f"🎯 File system completion: {activity['files_created']} files created, {activity['seconds_since_last_change']}s idle"
                                 yield f"⚡ File system completion detected - terminating process"
-                                process.terminate()
+                                await terminate_managed_process(process.pid)
                                 break
                             elif activity['seconds_since_last_change'] > 75:  # Longer wait without Claude signals
                                 if activity['files_created'] >= 2 and current_time - start_time > 75:
                                     yield f"🎯 Conservative completion: {activity['files_created']} files created, {activity['seconds_since_last_change']}s idle"
                                     yield f"⚡ Timeout-based completion detected - terminating process"
-                                    process.terminate()
+                                    await terminate_managed_process(process.pid)
                                     break
                                 elif current_time - start_time > 120:  # Extended patience
                                     yield f"⚠️ No file changes for {activity['seconds_since_last_change']}s - Claude might be thinking or stuck"
@@ -817,14 +822,14 @@ Begin implementation:"""
                         if completion_analysis['immediate_finish']:
                             yield f"✅ EXPLICIT COMPLETION MESSAGE DETECTED!"
                             yield f"⚡ Claude sent explicit completion signal - terminating immediately"
-                            process.terminate()
+                            await terminate_managed_process(process.pid)
                             break
                         
                         # Regular completion logic for general signals
                         elif completion_analysis['appears_finished']:
                             yield f"✅ Claude indicates task completion ({completion_analysis['total_completion_signals']} signals)"
                             yield f"⚡ Claude completion message detected - terminating process"
-                            process.terminate()
+                            await terminate_managed_process(process.pid)
                             break
                         
                 except asyncio.TimeoutError:
@@ -906,8 +911,10 @@ Begin implementation:"""
                 logger.info("⚠️  Permission checks are skipped for automated execution")
             
             # Execute CLI process with stdin
-            process = await asyncio.create_subprocess_exec(
+            process = await create_managed_subprocess_exec(
                 *cmd,
+                creator="claude_cli_executor.execute_streaming_prompt",
+                timeout=600.0,  # 10분 타임아웃
                 cwd=workspace_path,
                 env=env,
                 stdin=asyncio.subprocess.PIPE,

@@ -18,6 +18,9 @@ from shared.utils.api_manager import api_manager, APIProvider
 from shared.utils.response_validator import validate_ai_response
 from shared.utils.recovery_manager import get_recovery_manager, TaskStatus
 from shared.core.consistency_manager import ConsistencyManager
+from shared.core.circuit_breaker import global_circuit_breaker_manager, GEMINI_CIRCUIT_CONFIG
+from shared.core.deadlock_detector import global_deadlock_detector
+from shared.core.file_operation_guard import global_file_guard
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -87,64 +90,83 @@ class MasterClaudeCliSupervisor:
         """
         console.print(f"[blue]🧠 Master Claude starting CLI supervision of task: {task.id}[/blue]")
         
-        # Log context stats before starting
-        stats = self.context_manager.get_context_stats()
-        console.print(f"[dim]Context: {stats['total_tokens']}/{stats['available_tokens']} tokens ({stats['utilization']:.1%} used)[/dim]")
-        
-        # Phase 1: Analyze current state and plan execution with managed context
-        execution_plan = await self._analyze_and_plan_with_context(task, workspace_path, tasks_plan)
-        
-        # Add execution plan to context
-        self.context_manager.add_context(
-            content=json.dumps(execution_plan, indent=2),
-            content_type="execution_plan",
-            task_ids=[task.id],
-            importance=0.8
+        # 데드락 감지기에 작업 등록
+        worker_id = f"master_claude_{id(self)}"
+        global_deadlock_detector.register_task(
+            task.id, 
+            set(task.dependencies), 
+            timeout=600.0  # 10분 타임아웃
         )
+        global_deadlock_detector.update_task_status(task.id, "running", worker_id)
         
-        # Phase 2: Execute with iterative CLI supervision
-        result = await self._execute_with_cli_iterations(task, workspace_path, execution_plan)
-        
-        # Add logging information to result
-        result['master_analysis_prompt'] = execution_plan.get('analysis_prompt_used', '')
-        result['cli_prompts_used'] = getattr(self, '_cli_prompts_used', [])
-        
-        # Add execution result to context
-        self.context_manager.add_context(
-            content=json.dumps(result, indent=2),
-            content_type="execution_result",
-            task_ids=[task.id],
-            importance=0.7 if result.get('success') else 0.9  # Higher importance for failures
-        )
-        
-        # Phase 3: Final verification and summary
-        final_result = await self._final_verification(task, workspace_path, result)
-        
-        # Update context manager with task completion
-        self.context_manager.update_task_completion(task.id, final_result)
-        
-        # Add final result to context with high importance
-        self.context_manager.add_context(
-            content=json.dumps(final_result, indent=2),
-            content_type="task_completion",
-            task_ids=[task.id],
-            importance=0.9
-        )
-        
-        # Update execution history (keep for immediate access)
-        self.execution_history.append({
-            'task_id': task.id,
-            'execution_plan': execution_plan,
-            'result': final_result,
-            'timestamp': datetime.now().isoformat(),
-            'executor_type': 'cli'
-        })
-        
-        # Save context state periodically
-        if len(self.execution_history) % 5 == 0:  # Every 5 tasks
-            await self.context_manager.save_context_state(f"context_state_cli_{tasks_plan.project_id}.json")
-        
-        return final_result
+        try:
+            # Log context stats before starting
+            stats = self.context_manager.get_context_stats()
+            console.print(f"[dim]Context: {stats['total_tokens']}/{stats['available_tokens']} tokens ({stats['utilization']:.1%} used)[/dim]")
+            
+            # Phase 1: Analyze current state and plan execution with managed context
+            execution_plan = await self._analyze_and_plan_with_context(task, workspace_path, tasks_plan)
+            
+            # Add execution plan to context
+            await self.context_manager.add_context(
+                content=json.dumps(execution_plan, indent=2),
+                content_type="execution_plan",
+                task_ids=[task.id],
+                importance=0.8
+            )
+            
+            # Phase 2: Execute with iterative CLI supervision
+            result = await self._execute_with_cli_iterations(task, workspace_path, execution_plan)
+            
+            # Add logging information to result
+            result['master_analysis_prompt'] = execution_plan.get('analysis_prompt_used', '')
+            result['cli_prompts_used'] = getattr(self, '_cli_prompts_used', [])
+            
+            # Add execution result to context
+            await self.context_manager.add_context(
+                content=json.dumps(result, indent=2),
+                content_type="execution_result",
+                task_ids=[task.id],
+                importance=0.7 if result.get('success') else 0.9  # Higher importance for failures
+            )
+            
+            # Phase 3: Final verification and summary
+            final_result = await self._final_verification(task, workspace_path, result)
+            
+            # Update context manager with task completion
+            self.context_manager.update_task_completion(task.id, final_result)
+            
+            # Add final result to context with high importance
+            await self.context_manager.add_context(
+                content=json.dumps(final_result, indent=2),
+                content_type="task_completion",
+                task_ids=[task.id],
+                importance=0.9
+            )
+            
+            # Update execution history (keep for immediate access)
+            self.execution_history.append({
+                'task_id': task.id,
+                'execution_plan': execution_plan,
+                'result': final_result,
+                'timestamp': datetime.now().isoformat(),
+                'executor_type': 'cli'
+            })
+            
+            # Save context state periodically
+            if len(self.execution_history) % 5 == 0:  # Every 5 tasks
+                await self.context_manager.save_context_state(f"context_state_cli_{tasks_plan.project_id}.json")
+            
+            # 데드락 감지기에 완료 상태 업데이트
+            global_deadlock_detector.update_task_status(task.id, "completed", worker_id)
+            
+            return final_result
+            
+        except Exception as e:
+            # 실패 시 데드락 감지기 업데이트
+            global_deadlock_detector.update_task_status(task.id, "failed", worker_id)
+            logger.error(f"Task {task.id} execution failed: {e}")
+            raise
     
     async def _analyze_and_plan_with_context(self, task: Task, workspace_path: str, 
                                             tasks_plan: TasksPlan) -> Dict[str, Any]:
@@ -199,9 +221,16 @@ class MasterClaudeCliSupervisor:
 
         try:
             # Store prompt for logging
+            execution_plan = {}
             execution_plan['analysis_prompt_used'] = analysis_prompt
             
-            response = self.gemini_model.generate_content(
+            # 서킷 브레이커를 통한 보호된 Gemini 호출
+            circuit_breaker = global_circuit_breaker_manager.get_circuit_breaker(
+                "gemini_analysis", GEMINI_CIRCUIT_CONFIG
+            )
+            
+            response = await circuit_breaker.call(
+                self.gemini_model.generate_content,
                 analysis_prompt,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.3,  # Lower temperature for more focused analysis
@@ -775,65 +804,64 @@ Start with `pwd` command."""
             '_parsing_method': 'fallback_response'
         }
     
-    async def _execute_task_with_recovery(self, task: Task, workspace_path: str) -> Dict[str, Any]:
-        """Execute task with recovery support."""
-        if not self.recovery_manager:
-            project_id = Path(workspace_path).name
-            self.recovery_manager = get_recovery_manager(project_id)
+    async def _execute_task_with_recovery(self, task: Task, workspace_path: str, tasks_plan: TasksPlan) -> Dict[str, Any]:
+        """Execute task with intelligent error recovery support."""
         
-        # Create checkpoint before execution
-        checkpoint_id = self.recovery_manager.create_checkpoint(
-            task.id, 
-            TaskStatus.IN_PROGRESS,
-            {"workspace_path": workspace_path, "task_description": task.description}
-        )
+        logger.info(f"Executing task {task.id} with recovery support")
         
-        try:
-            # Execute with API rate limiting
-            result = await api_manager.execute_with_retry(
-                self._execute_task_internal,
-                APIProvider.CLAUDE,
-                task,
-                workspace_path
-            )
-            
-            # Mark as completed on success
-            if result.get('success', False):
-                self.recovery_manager.update_checkpoint(checkpoint_id, TaskStatus.COMPLETED)
-                self.recovery_manager.mark_task_completed(task.id)
-            else:
-                self.recovery_manager.update_checkpoint(
-                    checkpoint_id, 
-                    TaskStatus.FAILED,
-                    error_info={"result": result}
-                )
-            
-            return result
-            
-        except Exception as e:
-            # Record failure with error details
-            self.recovery_manager.update_checkpoint(
-                checkpoint_id,
-                TaskStatus.FAILED,
-                error_info={"exception": str(e), "type": type(e).__name__}
-            )
-            
-            # Attempt recovery if possible
-            if self.recovery_manager.can_recover_from_failure(task.id):
-                logger.info(f"Attempting recovery for task {task.id}")
-                recovery_checkpoint = await self.recovery_manager.recover_from_failure(task.id)
+        max_recovery_attempts = 3
+        current_attempt = 0
+        last_error = None
+        
+        while current_attempt < max_recovery_attempts:
+            try:
+                # Attempt normal execution
+                result = await self.execute_task_with_cli_supervision(task, workspace_path, tasks_plan)
                 
-                if recovery_checkpoint:
-                    # Retry with recovery context
-                    return await self._execute_task_internal(task, workspace_path)
-            
-            raise
-    
-    async def _execute_task_internal(self, task: Task, workspace_path: str) -> Dict[str, Any]:
-        """Internal task execution method."""
-        # This should contain the actual task execution logic
-        # For now, we'll call the existing method
-        return await self._execute_single_cli_task(task, workspace_path)
+                # If successful, return immediately
+                if result.get('overall_success', result.get('success', False)):
+                    logger.info(f"Task {task.id} completed successfully on attempt {current_attempt + 1}")
+                    return result
+                
+                # If failed, check if recovery is possible
+                error_message = result.get('error', 'Task execution failed')
+                logger.warning(f"Task {task.id} failed on attempt {current_attempt + 1}: {error_message}")
+                
+                # Check if we have error recovery manager
+                if hasattr(self, 'error_recovery_manager') and self.error_recovery_manager:
+                    logger.info(f"Attempting error recovery for task {task.id}")
+                    
+                    # Try to recover from the error
+                    recovery_success, recovery_result = await self.error_recovery_manager.handle_task_error(
+                        task, error_message, None, task.files_to_create_or_modify
+                    )
+                    
+                    if recovery_success:
+                        logger.info(f"Error recovery successful for task {task.id}")
+                        # Continue to next attempt with recovered state
+                        current_attempt += 1
+                        continue
+                    else:
+                        logger.warning(f"Error recovery failed for task {task.id}")
+                
+                last_error = error_message
+                current_attempt += 1
+                
+            except Exception as e:
+                logger.error(f"Exception during task {task.id} execution: {e}")
+                last_error = str(e)
+                current_attempt += 1
+        
+        # All attempts failed
+        logger.error(f"Task {task.id} failed after {max_recovery_attempts} attempts. Last error: {last_error}")
+        
+        return {
+            'success': False,
+            'overall_success': False,
+            'error': f"Task failed after {max_recovery_attempts} recovery attempts. Last error: {last_error}",
+            'recovery_attempts': max_recovery_attempts,
+            'final_error': last_error
+        }
     
     # Inherit other methods from the base supervisor
     async def _get_workspace_state(self, workspace_path: str) -> str:
@@ -1028,91 +1056,104 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
                                      verification_results: Dict[str, Any]) -> Dict[str, Any]:
         """Master Claude's final assessment of the CLI task completion."""
         
-        assessment_prompt = f"""You are the Master Supervisor making a final assessment of a completed coding task executed via Claude CLI.
+        logger.info(f"Conducting final assessment for task {task.id}")
+        
+        try:
+            # Prepare assessment context
+            assessment_context = {
+                'task_description': task.description,
+                'task_type': task.type,
+                'project_area': task.project_area,
+                'expected_files': task.files_to_create_or_modify,
+                'execution_result': execution_result,
+                'verification_results': verification_results,
+                'workspace_state': await self._get_workspace_state(workspace_path)
+            }
+            
+            # Create assessment prompt for Gemini
+            assessment_prompt = f"""
+Conduct a final assessment of this coding task completion:
 
-**TASK COMPLETED:** {task.description}
+**TASK DETAILS:**
+Task ID: {task.id}
+Type: {task.type}
+Area: {task.project_area}
+Description: {task.description}
 
-**CLI EXECUTION SUMMARY:**
-{execution_result}
+**EXECUTION RESULTS:**
+Success: {execution_result.get('success', False)}
+CLI Effectiveness: {execution_result.get('cli_effectiveness', 'N/A')}
+Feedback: {execution_result.get('feedback', 'No feedback')}
 
 **VERIFICATION RESULTS:**
-Tests passed: {verification_results.get('tests_passed', [])}
-Tests failed: {verification_results.get('tests_failed', [])}
-Linting passed: {verification_results.get('linting_passed', False)}
-Files verified: {verification_results.get('files_verified', [])}
+Tests Passed: {len(verification_results.get('tests_passed', []))}
+Tests Failed: {len(verification_results.get('tests_failed', []))}
+Linting Passed: {verification_results.get('linting_passed', False)}
+Files Verified: {len(verification_results.get('files_verified', []))}
 
-**CLI EXECUTION NOTES:**
-Executor Type: {execution_result.get('executor_type', 'unknown')}
-Iterations: {execution_result.get('iterations', 1)}
+**EXPECTED FILES:**
+{chr(10).join(f"- {file}" for file in task.files_to_create_or_modify)}
 
-**FINAL ASSESSMENT REQUIRED:**
-Provide a comprehensive assessment in JSON format:
+**CURRENT WORKSPACE STATE:**
+{assessment_context['workspace_state'][:1000]}...
 
-```json
-{{
-    "success": true/false,
-    "quality_score": 1-10,
-    "completion_percentage": 0-100,
-    "strengths": ["strength1", "strength2"],
-    "weaknesses": ["weakness1", "weakness2"],
-    "recommendations": ["recommendation1", "recommendation2"],
-    "cli_effectiveness": 1-10,
-    "cli_advantages_realized": ["advantage1", "advantage2"],
-    "ready_for_next_task": true/false,
-    "summary": "Brief summary of the CLI task completion"
-}}
-```"""
+Provide a final assessment with:
+1. Overall success determination (true/false)
+2. Quality score (1-10)
+3. Assessment summary (2-3 sentences)
+4. Any concerns or recommendations
+5. Ready for production (true/false)
 
-        try:
+Format as JSON with keys: success, quality_score, summary, concerns, ready_for_production
+"""
+            
+            # Get assessment from Gemini
             response = self.gemini_model.generate_content(
                 assessment_prompt,
                 generation_config=genai.types.GenerationConfig(
-                    temperature=0.1,
-                    max_output_tokens=1500,
-                ),
-                safety_settings=[
-                    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-                ]
+                    temperature=0.2,
+                    max_output_tokens=1000
+                )
             )
             
-            # Check if response was blocked
-            if not response.candidates or not response.candidates[0].content:
-                logger.warning("Gemini response blocked by safety filters")
-                raise Exception("Response blocked by safety filters")
+            # Parse assessment response
+            assessment = self._parse_json_with_fallbacks(response.text, assessment_context)
             
-            # Parse response with better error handling
-            assessment_text = response.text
-            if '```json' in assessment_text:
-                json_start = assessment_text.find('```json') + 7
-                json_end = assessment_text.find('```', json_start)
-                if json_end == -1:  # No closing ```
-                    assessment_text = assessment_text[json_start:]
-                else:
-                    assessment_text = assessment_text[json_start:json_end]
+            # Ensure required fields
+            assessment.setdefault('success', execution_result.get('success', False))
+            assessment.setdefault('quality_score', 5)
+            assessment.setdefault('summary', 'Assessment completed')
+            assessment.setdefault('concerns', [])
+            assessment.setdefault('ready_for_production', assessment.get('success', False))
             
-            # Clean up common JSON issues
-            assessment_text = assessment_text.strip()
-            assessment_text = assessment_text.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+            # Add context information
+            assessment['assessment_method'] = 'gemini_llm'
+            assessment['verification_data'] = verification_results
+            assessment['execution_data'] = execution_result
             
-            try:
-                return json.loads(assessment_text)
-            except json.JSONDecodeError as json_error:
-                logger.warning(f"JSON parsing failed in final assessment: {json_error}")
-                logger.warning(f"Raw response text: {assessment_text[:500]}")
-                # Use fallback assessment
-                raise Exception(f"JSON parsing failed: {json_error}")
+            logger.info(f"Final assessment for task {task.id}: success={assessment['success']}, "
+                       f"quality={assessment['quality_score']}")
+            
+            return assessment
             
         except Exception as e:
-            logger.error(f"Error in final CLI assessment: {e}")
+            logger.error(f"Error in final assessment: {e}")
+            
+            # Fallback assessment
+            fallback_success = (
+                execution_result.get('success', False) and
+                len(verification_results.get('tests_failed', [])) == 0 and
+                len(verification_results.get('files_verified', [])) > 0
+            )
+            
             return {
-                'success': len(verification_results.get('tests_failed', [])) == 0,
-                'summary': 'CLI assessment completed with basic verification',
-                'quality_score': 7,
-                'cli_effectiveness': 7,
-                'executor_type': 'cli'
+                'success': fallback_success,
+                'quality_score': 6 if fallback_success else 3,
+                'summary': f'Fallback assessment due to error: {str(e)}',
+                'concerns': ['Assessment error occurred'],
+                'ready_for_production': fallback_success,
+                'assessment_method': 'fallback',
+                'error': str(e)
             }
     
     def cleanup(self):
