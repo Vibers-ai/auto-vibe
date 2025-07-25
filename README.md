@@ -20,6 +20,7 @@
 
 VIBE is an advanced autonomous coding agent that transforms project documentation into complete, production-ready software. Using a sophisticated **Master Claude + Code Claude** architecture with comprehensive defense systems, VIBE manages complex projects with intelligent supervision, context management, and automated quality assurance.
 
+<<<<<<< HEAD
 ### 🎉 **Proven Test Results**
 
 VIBE has been successfully tested to generate a complete CRUD bulletin board application:
@@ -29,6 +30,8 @@ VIBE has been successfully tested to generate a complete CRUD bulletin board app
 - **Technologies Generated**: FastAPI backend, Vanilla JS frontend, SQLite database
 - **Time**: ~5 minutes for complete project generation
 
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ### 🌟 **Key Highlights**
 
 - 🧠 **Intelligent Dual-AI Architecture** - Master Claude (Gemini) supervises Code Claude (Claude CLI) for optimal results
@@ -43,6 +46,7 @@ VIBE has been successfully tested to generate a complete CRUD bulletin board app
 
 ## 🚀 **Quick Start**
 
+<<<<<<< HEAD
 ### 🎯 Simple Example: Create a CRUD App in 5 Minutes
 
 ```bash
@@ -73,6 +77,8 @@ python ../src/cli.py generate --docs . --output output
 # ✅ Done! Check output/ for your complete application
 ```
 
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ### Prerequisites
 
 #### System Requirements
@@ -98,7 +104,11 @@ git clone https://github.com/Vibers-ai/auto-vibe.git
 cd auto-vibe
 
 # Create and activate virtual environment
+<<<<<<< HEAD
 python3 -m venv venv
+=======
+python -m venv venv
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 # Activate virtual environment
 # On Windows:
@@ -109,7 +119,11 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
+<<<<<<< HEAD
 # Install the package in development mode (optional)
+=======
+# Install the package in development mode
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 pip install -e .
 ```
 
@@ -129,8 +143,13 @@ claude configure
 ### Setup
 
 ```bash
+<<<<<<< HEAD
 # Initialize a new project (use direct script execution)
 python src/cli.py init my-awesome-project
+=======
+# Initialize a new project using module syntax
+python -m src.cli init my-awesome-project
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 cd my-awesome-project
 
 # Configure API keys (create .env file)
@@ -192,6 +211,7 @@ docs/
 ├── ui_mockups.png                 # UI/UX designs
 ├── database_schema.md             # Data models
 └── project_overview.txt           # General overview
+<<<<<<< HEAD
 
 # Or create a simple PRD.md file (like our test example):
 cat > PRD.md << 'EOF'
@@ -210,10 +230,13 @@ A simple web-based bulletin board system with CRUD operations.
 - RESTful API endpoints
 - Simple responsive UI
 EOF
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ```
 
 #### Step 4: Generate Your Project
 ```bash
+<<<<<<< HEAD
 # Basic generation (uses current directory for docs and outputs to ./output)
 python ../src/cli.py generate --docs . --output output
 
@@ -228,6 +251,22 @@ python ../src/cli.py generate --docs . --output output --skip-planning
 
 # Generate with specific environment file
 python ../src/cli.py generate --docs . --output output --env ./production.env
+=======
+# Basic generation (uses ./docs and outputs to ./output)
+python ../src/cli.py generate
+
+# Custom paths and options
+python ../src/cli.py generate \
+    --docs ./documentation \
+    --output ./generated_code \
+    --log-level DEBUG
+
+# Skip planning phase (use existing tasks.json)
+python ../src/cli.py generate --skip-planning
+
+# Generate with specific environment file
+python ../src/cli.py generate --env ./production.env
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ```
 
 #### Step 5: Monitor Progress (Optional)
@@ -550,6 +589,7 @@ microservices/
 
 ---
 
+<<<<<<< HEAD
 ## 🧪 **Real Test Results**
 
 ### CRUD Bulletin Board Generation Test
@@ -650,12 +690,15 @@ async function fetchPosts() {
 
 ---
 
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ## 📖 **Documentation**
 
 ### CLI Commands
 
 ```bash
 # Project Management
+<<<<<<< HEAD
 python src/cli.py init <project-name>              # Initialize new project
 python src/cli.py generate --docs <path> --output <path>  # Generate project from docs
 python src/cli.py validate tasks.json              # Validate task configuration
@@ -669,6 +712,21 @@ python src/cli.py context export --file knowledge.json # Export project knowledg
 python src/cli.py monitor --mode web --port 8080   # Start web dashboard
 python src/cli.py monitor --mode terminal          # Start terminal dashboard  
 python src/cli.py status --session session_id      # Check execution status
+=======
+python -m src.cli init <project-name>              # Initialize new project
+python -m src.cli generate                         # Generate project from docs
+python -m src.cli validate tasks.json              # Validate task configuration
+
+# Context Management  
+python -m src.cli context stats --project my-app   # Show context statistics
+python -m src.cli context compress --strategy hybrid # Force context compression
+python -m src.cli context export --file knowledge.json # Export project knowledge
+
+# Monitoring & Status
+python -m src.cli monitor --mode web --port 8080   # Start web dashboard
+python -m src.cli monitor --mode terminal          # Start terminal dashboard  
+python -m src.cli status --session session_id      # Check execution status
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 # Defense System Management
 python src/cli.py defense status                   # Check defense system status
@@ -788,6 +846,7 @@ auto-vibe/
 
 ### Common Issues and Solutions
 
+<<<<<<< HEAD
 #### 1. Python Command Issues
 
 ```bash
@@ -803,21 +862,32 @@ python3 --version  # Should be 3.9 or higher
 ```
 
 #### 2. Installation Issues
+=======
+#### 1. Installation Issues
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ```bash
 # ModuleNotFoundError: Ensure virtual environment is activated
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
+<<<<<<< HEAD
 
 # If pip fails, use pip3
 pip3 install -r requirements.txt
+=======
+pip install -e .
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 # Permission errors
 chmod +x scripts/*
 sudo chown -R $USER:$USER .
 ```
 
+<<<<<<< HEAD
 #### 3. API Configuration
+=======
+#### 2. API Configuration
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ```bash
 # Invalid or missing API keys
@@ -827,7 +897,11 @@ cat .env  # Check if API keys are properly set
 python -c "import google.generativeai as genai; genai.configure(api_key='your_key'); print('Gemini OK')"
 ```
 
+<<<<<<< HEAD
 #### 4. Claude CLI Issues
+=======
+#### 3. Claude CLI Issues
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ```bash
 # Claude CLI not found
@@ -838,7 +912,11 @@ claude --version
 export CLAUDE_CLI_USE_NPX=true
 ```
 
+<<<<<<< HEAD
 #### 5. Memory and Performance
+=======
+#### 4. Memory and Performance
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ```bash
 # Reduce memory usage for large projects
@@ -847,6 +925,7 @@ export CONTEXT_COMPRESSION_STRATEGY=hybrid
 
 # Enable debug mode
 export LOG_LEVEL=DEBUG
+<<<<<<< HEAD
 python3 src/cli.py generate --docs . --output output --log-level DEBUG
 ```
 
@@ -861,12 +940,29 @@ python src/cli.py defense reset
 
 # Check system health
 python src/cli.py defense diagnostics
+=======
+python -m src.cli generate --log-level DEBUG
+```
+
+#### 5. Process Management Issues
+
+```bash
+# Check process status
+python -m src.cli defense status
+
+# Emergency cleanup
+python -m src.cli defense reset
+
+# Check system health
+python -m src.cli defense diagnostics
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ```
 
 ### Recovery from Failed Executions
 
 ```bash
 # Check session status
+<<<<<<< HEAD
 python src/cli.py status --session session_id
 
 # Resume from checkpoint (automatic)
@@ -875,6 +971,16 @@ python src/cli.py generate --docs . --output output --skip-planning
 # Manual recovery with context export/import
 python src/cli.py context export --file backup.json
 python src/cli.py context import --file backup.json
+=======
+python -m src.cli status --session session_id
+
+# Resume from checkpoint (automatic)
+python -m src.cli generate --skip-planning
+
+# Manual recovery with context export/import
+python -m src.cli context export --file backup.json
+python -m src.cli context import --file backup.json
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ```
 
 ### Debug Mode
@@ -883,13 +989,21 @@ python src/cli.py context import --file backup.json
 # Enable comprehensive debugging
 export LOG_LEVEL=DEBUG
 export ENABLE_MONITORING=true
+<<<<<<< HEAD
 python src/cli.py generate --docs . --output output --log-level DEBUG
+=======
+python -m src.cli generate --debug
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 # Check logs
 tail -f output/logs/session_*.md
 ```
 
+<<<<<<< HEAD
 #### 7. CLI Execution Issues
+=======
+#### 6. CLI Execution Issues
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ```bash
 # Issue: Cannot import name 'main' from 'src.cli'
@@ -906,7 +1020,11 @@ pip install -e .
 vibe --help
 ```
 
+<<<<<<< HEAD
 #### 8. Import Path and Circular Import Errors
+=======
+#### 7. Import Path and Circular Import Errors
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ```bash
 # Issue: Circular import or module not found errors
@@ -924,7 +1042,11 @@ ls -la src/cli/
 pwd  # Should show /path/to/auto-vibe
 ```
 
+<<<<<<< HEAD
 #### 9. Performance and Resource Issues
+=======
+#### 8. Performance and Resource Issues
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ```bash
 # Issue: High memory usage or slow execution

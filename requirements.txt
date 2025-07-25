@@ -34,10 +34,13 @@ tenacity>=8.0
 docker>=6.0
 watchdog>=3.0
 
+<<<<<<< HEAD
 # Code validation
 esprima>=4.0.1
 pyyaml>=6.0
 
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 # Testing
 pytest>=7.0
 pytest-asyncio>=0.21.0

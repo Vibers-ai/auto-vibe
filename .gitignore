@@ -16,6 +16,10 @@ parts/
 sdist/
 var/
 wheels/
+<<<<<<< HEAD
+=======
+share/python-wheels/
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 *.egg-info/
 .installed.cfg
 *.egg
@@ -23,7 +27,10 @@ MANIFEST
 
 # Virtual Environment
 venv/
+<<<<<<< HEAD
 vibe-env/
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ENV/
 env/
 .venv
@@ -35,6 +42,7 @@ env/
 *.swo
 *~
 
+<<<<<<< HEAD
 # Project specific
 .env
 *.db
@@ -48,10 +56,50 @@ test_bulletin_board/*.db
 test_bulletin_board/ProjectBrief.md
 test_bulletin_board/architecture.md
 test_bulletin_board/tasks.json
+=======
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Output and temporary files
+output/
+my-new-project/
+sandbox/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Test coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+executor_state.db
+
+# Docker
+.dockerignore
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 # OS
 .DS_Store
 Thumbs.db
+<<<<<<< HEAD
 
 # Testing
 .pytest_cache/
@@ -64,3 +112,12 @@ htmlcov/
 docs/_build/
 docs/_static/
 docs/_templates/
+=======
+ehthumbs.db
+Desktop.ini
+
+# Project specific
+ProjectBrief.md
+tasks.json
+vibe.log
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271

@@ -17,8 +17,12 @@ if src_dir.name == 'src':
 import os
 import logging
 from pathlib import Path
+<<<<<<< HEAD
 from typing import List, Dict, Any, Optional, Tuple
 import re
+=======
+from typing import List, Dict, Any, Optional
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 from datetime import datetime
 
 import pdfplumber
@@ -146,6 +150,7 @@ class DocumentIngestionAgent:
             return None
     
     def _process_pdf_file(self, file_path: Path) -> Optional[str]:
+<<<<<<< HEAD
         """Extract text, tables, and structure from PDF files with enhanced processing."""
         try:
             content = []
@@ -182,6 +187,25 @@ class DocumentIngestionAgent:
                 content.append(f"\n## Document contains {len(document_structure['tables'])} tables")
             if document_structure["images"]:
                 content.append(f"## Document contains {len(document_structure['images'])} images/diagrams")
+=======
+        """Extract text and tables from PDF files."""
+        try:
+            content = []
+            
+            with pdfplumber.open(file_path) as pdf:
+                for page_num, page in enumerate(pdf.pages, 1):
+                    # Extract text
+                    text = page.extract_text()
+                    if text:
+                        content.append(f"Page {page_num}:\n{text}")
+                    
+                    # Extract tables
+                    tables = page.extract_tables()
+                    for table_idx, table in enumerate(tables):
+                        if table:
+                            table_md = self._table_to_markdown(table)
+                            content.append(f"\nTable {table_idx + 1} on Page {page_num}:\n{table_md}")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             return "\n\n".join(content)
         
@@ -218,6 +242,7 @@ class DocumentIngestionAgent:
             return None
     
     def _process_image_file(self, file_path: Path) -> Optional[str]:
+<<<<<<< HEAD
         """Analyze images using Gemini's multimodal capabilities with enhanced UI component extraction."""
         try:
             image = Image.open(file_path)
@@ -241,11 +266,36 @@ class DocumentIngestionAgent:
             structured_content = self._structure_image_analysis(response.text, image_type)
             
             return f"### Image Analysis: {file_path.name}\n\n{structured_content}"
+=======
+        """Analyze images using Gemini's multimodal capabilities."""
+        try:
+            image = Image.open(file_path)
+            
+            prompt = """Analyze this image and provide a detailed description. 
+            If this is a UI mockup, wireframe, or design document, describe:
+            - The layout and structure
+            - UI components present (buttons, forms, navigation, etc.)
+            - Any text or labels visible
+            - The apparent functionality or purpose
+            - Color scheme and visual style if relevant
+            
+            If this is a diagram or flowchart, describe:
+            - The type of diagram
+            - Components and their relationships
+            - Any process flow or data flow shown
+            - Key information conveyed
+            
+            Be as specific and detailed as possible."""
+            
+            response = self.gemini_model.generate_content([prompt, image])
+            return response.text
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         
         except Exception as e:
             logger.error(f"Error processing image file {file_path}: {e}")
             return None
     
+<<<<<<< HEAD
     def _determine_image_type(self, file_path: Path, image: Image) -> str:
         """Determine the type of image based on filename and characteristics."""
         filename_lower = file_path.name.lower()
@@ -448,10 +498,26 @@ Be thorough and specific in your analysis."""
         rows = []
         for row in normalized_data[1:]:
             row_str = "| " + " | ".join(row) + " |"
+=======
+    def _table_to_markdown(self, table_data: List[List[str]]) -> str:
+        """Convert table data to Markdown format."""
+        if not table_data or not table_data[0]:
+            return ""
+        
+        # Create header
+        header = "| " + " | ".join(str(cell) for cell in table_data[0]) + " |"
+        separator = "| " + " | ".join("---" for _ in table_data[0]) + " |"
+        
+        # Create rows
+        rows = []
+        for row in table_data[1:]:
+            row_str = "| " + " | ".join(str(cell) for cell in row) + " |"
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             rows.append(row_str)
         
         return "\n".join([header, separator] + rows)
     
+<<<<<<< HEAD
     def _extract_page_with_structure(self, page, page_num: int) -> Optional[str]:
         """Extract text from page with structure and formatting preservation."""
         try:
@@ -657,6 +723,8 @@ Be thorough and specific in your analysis."""
         except Exception:
             return None
     
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     def _format_section(self, title: str, content: str) -> str:
         """Format a content section for the ProjectBrief."""
         return f"""
@@ -668,6 +736,7 @@ Be thorough and specific in your analysis."""
 """
     
     def _generate_project_brief(self, all_content: List[str]) -> str:
+<<<<<<< HEAD
         """Generate the final ProjectBrief.md file with semantic analysis."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -677,12 +746,18 @@ Be thorough and specific in your analysis."""
         # Create structured sections based on analysis
         structured_content = self._create_structured_brief(all_content, analysis_results)
         
+=======
+        """Generate the final ProjectBrief.md file."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         brief_content = f"""# Project Brief
 Generated on: {timestamp}
 
 This document is a synthesized compilation of all project documentation found in the docs folder.
 It serves as the primary input for the AI planning and code generation process.
 
+<<<<<<< HEAD
 ## Executive Summary
 {analysis_results.get('executive_summary', 'No summary available')}
 
@@ -705,6 +780,11 @@ It serves as the primary input for the AI planning and code generation process.
 ## Detailed Documentation
 
 {structured_content}
+=======
+---
+
+{"".join(all_content)}
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ## End of Project Brief
 
@@ -716,6 +796,7 @@ information to design the complete software architecture and create detailed imp
         output_path = Path("ProjectBrief.md")
         output_path.write_text(brief_content, encoding='utf-8')
         
+<<<<<<< HEAD
         return str(output_path)
     
     def _analyze_document_semantics(self, all_content: List[str]) -> Dict[str, Any]:
@@ -1009,3 +1090,6 @@ information to design the complete software architecture and create detailed imp
                 formatted.append(f"**{category}**: {', '.join(techs)}")
         
         return "\n".join(formatted) if formatted else "No specific technologies identified."
+=======
+        return str(output_path)
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271

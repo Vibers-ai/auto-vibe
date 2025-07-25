@@ -4,11 +4,17 @@ import asyncio
 import logging
 import os
 from datetime import datetime
+<<<<<<< HEAD
 from typing import Dict, Any, List, Optional, Tuple
 import json
 from pathlib import Path
 import signal
 import atexit
+=======
+from typing import Dict, Any, List, Optional
+import json
+from pathlib import Path
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 from rich.console import Console
 from rich.progress import Progress, TaskID
@@ -19,9 +25,12 @@ from cli.agents.master_claude_cli_supervisor import MasterClaudeCliSupervisor
 from shared.core.state_manager import ExecutorState
 from shared.core.parallel_executor import ParallelTaskExecutor
 from shared.core.consistency_manager import ConsistencyManager
+<<<<<<< HEAD
 from cli.monitoring import EnhancedProgressMonitor, TaskStatus
 from shared.core.process_manager import ProcessManager, terminate_managed_process
 from shared.core.workspace_analyzer import workspace_analyzer
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -54,6 +63,7 @@ class TaskExecutorCli:
         self.completed_tasks = 0
         self.failed_tasks = 0
         self.use_parallel_execution = True
+<<<<<<< HEAD
         
         # Setup cleanup handlers
         self._setup_cleanup_handlers()
@@ -63,6 +73,8 @@ class TaskExecutorCli:
             max_workers=max_parallel_tasks,
             update_interval=0.5
         )
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     
     async def execute_tasks(self, tasks_file: str, workspace_path: str = "output") -> bool:
         """Execute all tasks from the tasks.json file using CLI.
@@ -90,6 +102,7 @@ class TaskExecutorCli:
         
         console.print(f"[green]📋 Loaded {len(tasks_plan.tasks)} tasks for CLI execution[/green]")
         
+<<<<<<< HEAD
         # Initialize enhanced progress monitoring
         console.print("[blue]🎯 Initializing enhanced progress monitoring...[/blue]")
         for task in tasks_plan.tasks:
@@ -99,6 +112,8 @@ class TaskExecutorCli:
                 dependencies=task.dependencies
             )
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # Initialize session
         self.start_time = datetime.now()
         
@@ -119,6 +134,7 @@ class TaskExecutorCli:
         )
         
         try:
+<<<<<<< HEAD
             # Analyze workspace structure first
             console.print("[blue]📁 Analyzing workspace structure...[/blue]")
             workspace_structure = workspace_analyzer.analyze_workspace(workspace_path)
@@ -131,10 +147,13 @@ class TaskExecutorCli:
                     console.print(f"[red]  - {issue.description}[/red]")
                     console.print(f"[yellow]    Fix: {issue.suggested_fix}[/yellow]")
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             # Initialize consistency patterns from workspace
             console.print("[blue]🔍 Analyzing workspace for consistency patterns[/blue]")
             self.consistency_manager.initialize_from_workspace(workspace_path)
             
+<<<<<<< HEAD
             # Start enhanced progress monitoring
             self.progress_monitor.start_monitoring(
                 title=f"Executing {len(tasks_plan.tasks)} tasks for {tasks_plan.project_id}"
@@ -147,6 +166,22 @@ class TaskExecutorCli:
             if self.use_parallel_execution and len(tasks_plan.tasks) > 1:
                 console.print(f"[green]⚡ Using hybrid execution strategy[/green]")
                 success = await self._execute_tasks_hybrid_strategy(tasks_plan, workspace_path)
+=======
+            # Choose execution method based on configuration
+            if self.use_parallel_execution and len(tasks_plan.tasks) > 1:
+                console.print(f"[green]⚡ Using parallel execution with {self.max_parallel_tasks} workers[/green]")
+                success, execution_stats = await self.parallel_executor.execute_tasks_parallel(
+                    tasks_plan, workspace_path
+                )
+                
+                # Update tracking from parallel execution stats
+                self.completed_tasks = execution_stats.completed_tasks
+                self.failed_tasks = execution_stats.failed_tasks
+                
+                # Display parallel execution report
+                self._display_parallel_execution_report(execution_stats)
+                
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             else:
                 console.print("[yellow]📋 Using sequential execution[/yellow]")
                 success = await self._execute_tasks_with_cli_supervision(tasks_plan, workspace_path)
@@ -183,9 +218,12 @@ class TaskExecutorCli:
             return False
         
         finally:
+<<<<<<< HEAD
             # Stop progress monitoring
             self.progress_monitor.stop_monitoring()
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             # Log session summary
             self._log_session_summary(success, tasks_plan)
             
@@ -252,6 +290,7 @@ class TaskExecutorCli:
         
         return unique_recommendations[:5]  # Top 5 recommendations
     
+<<<<<<< HEAD
     async def _execute_tasks_hybrid_strategy(self, tasks_plan: TasksPlan, workspace_path: str) -> bool:
         """Execute tasks using hybrid strategy: sequential for setup/shared, parallel for others."""
         
@@ -551,6 +590,8 @@ class TaskExecutorCli:
                 status="running"
             )
     
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     def _display_parallel_execution_report(self, stats) -> None:
         """Display parallel execution statistics."""
         
@@ -583,6 +624,7 @@ class TaskExecutorCli:
                     title="Performance Insights",
                     border_style="green"
                 ))
+<<<<<<< HEAD
         
         # Display enhanced monitoring insights
         parallel_status = self.progress_monitor.get_parallel_status()
@@ -596,6 +638,8 @@ class TaskExecutorCli:
                 title="Parallelization Efficiency",
                 border_style="yellow"
             ))
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     
     def _display_consistency_report(self, consistency_report: Dict[str, Any]) -> None:
         """Display consistency validation report."""
@@ -724,6 +768,7 @@ class TaskExecutorCli:
                 console.print(f"[dim]Description: {task.description}[/dim]")
                 console.print(f"[dim]Type: {task.type} | Area: {task.project_area}[/dim]")
                 
+<<<<<<< HEAD
                 # Update progress monitor
                 self.progress_monitor.update_task_status(task.id, TaskStatus.RUNNING, progress=0.0)
                 
@@ -734,6 +779,13 @@ class TaskExecutorCli:
                         workspace_context = workspace_analyzer.get_workspace_context_for_claude(workspace_path)
                         result = await self.master_supervisor.execute_task_with_cli_supervision(
                             task, workspace_path, tasks_plan, workspace_context
+=======
+                try:
+                    # Execute task with Master Claude CLI supervision
+                    if self.master_supervisor:
+                        result = await self.master_supervisor.execute_task_with_cli_supervision(
+                            task, workspace_path, tasks_plan
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                         )
                     else:
                         # Fallback: direct CLI execution without supervision
@@ -747,9 +799,12 @@ class TaskExecutorCli:
                         console.print(f"[green]✅ CLI Task {task.id} completed successfully[/green]")
                         self.completed_tasks += 1
                         
+<<<<<<< HEAD
                         # Update progress monitor
                         self.progress_monitor.update_task_status(task.id, TaskStatus.COMPLETED, progress=100.0)
                         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                         self.state.update_task_status(
                             session_id=self.session_id,
                             task_id=task.id,
@@ -763,9 +818,12 @@ class TaskExecutorCli:
                         error_msg = result.get('error', 'Unknown error')
                         console.print(f"[red]Error: {error_msg}[/red]")
                         
+<<<<<<< HEAD
                         # Update progress monitor
                         self.progress_monitor.update_task_status(task.id, TaskStatus.FAILED, progress=0.0, error=error_msg)
                         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                         self.state.update_task_status(
                             session_id=self.session_id,
                             task_id=task.id,
@@ -781,12 +839,18 @@ class TaskExecutorCli:
                 
                 except Exception as e:
                     console.print(f"[red]❌ CLI Task {task.id} crashed: {e}[/red]")
+<<<<<<< HEAD
                     logger.error(f"Task {task.id} crashed: {e}", exc_info=True)
                     self.failed_tasks += 1
                     
                     # Update progress monitor
                     self.progress_monitor.update_task_status(task.id, TaskStatus.FAILED, progress=0.0, error=str(e))
                     
+=======
+                    logger.error(f"Task {task.id} crashed: {e}")
+                    self.failed_tasks += 1
+                    
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                     self.state.update_task_status(
                         session_id=self.session_id,
                         task_id=task.id,
@@ -794,6 +858,7 @@ class TaskExecutorCli:
                         error=str(e)
                     )
                     
+<<<<<<< HEAD
                     # Continue execution even if task fails, unless it's critical
                     if task.type == "critical":
                         console.print(f"[red]🛑 Critical task {task.id} failed. Stopping execution.[/red]")
@@ -801,6 +866,10 @@ class TaskExecutorCli:
                             return False
                     else:
                         console.print(f"[yellow]⚠️ Task {task.id} failed but continuing with remaining tasks...[/yellow]")
+=======
+                    if not self._should_continue_on_failure(task, {'error': str(e)}):
+                        return False
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                 
                 finally:
                     progress.advance(main_task)
@@ -920,6 +989,7 @@ Check the workspace directory for generated files and project structure.
         
         console.print(f"[blue]📝 Detailed logs saved to: {self.session_log_file}[/blue]")
     
+<<<<<<< HEAD
     def _setup_cleanup_handlers(self):
         """Setup signal handlers and exit handlers to ensure proper cleanup."""
         def emergency_cleanup(signum=None, frame=None):
@@ -956,6 +1026,8 @@ Check the workspace directory for generated files and project structure.
         
         logger.info("Cleanup handlers registered for SIGTERM, SIGINT, and exit")
     
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     async def _execute_task_directly_cli(self, task, workspace_path: str) -> Dict[str, Any]:
         """Fallback: Execute task directly with CLI without Master supervision."""
         from ..agents.claude_cli_executor import ClaudeCliExecutor
@@ -1043,7 +1115,11 @@ Check the workspace directory for generated files and project structure.
         console.print(f"[yellow]⚠️ Non-critical task {task.id} failed - continuing execution[/yellow]")
         return True
     
+<<<<<<< HEAD
     def _display_final_results(self, success: bool, tasks_plan: TasksPlan, consistency_report: Dict[str, Any] = None):
+=======
+    def _display_final_results(self, success: bool, tasks_plan: TasksPlan):
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         """Display final execution results."""
         
         elapsed_time = datetime.now() - self.start_time if self.start_time else None

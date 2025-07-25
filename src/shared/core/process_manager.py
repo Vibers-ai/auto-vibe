@@ -11,7 +11,10 @@ from dataclasses import dataclass
 from enum import Enum
 import weakref
 import atexit
+<<<<<<< HEAD
 from .process_lifecycle_manager import ProcessLifecycleManager
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 logger = logging.getLogger(__name__)
 
@@ -71,10 +74,13 @@ class ProcessManager:
         self.monitoring_task = None
         self.shutdown_event = asyncio.Event()
         
+<<<<<<< HEAD
         # Lifecycle manager for completion signals and idle detection
         self.lifecycle_manager = ProcessLifecycleManager(idle_timeout_seconds=300)
         self.lifecycle_manager.start_monitoring()
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # 종료 핸들러 등록
         atexit.register(self._emergency_cleanup)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -113,9 +119,12 @@ class ProcessManager:
             
             logger.info(f"Created subprocess PID {process.pid} by {creator}")
             
+<<<<<<< HEAD
             # Register with lifecycle manager
             self.lifecycle_manager.register_process(process.pid, command=' '.join(str(arg) for arg in args))
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             # 타임아웃 설정
             if timeout:
                 asyncio.create_task(self._monitor_timeout(process.pid, timeout))
@@ -159,9 +168,12 @@ class ProcessManager:
             
             logger.info(f"Created shell subprocess PID {process.pid} by {creator}")
             
+<<<<<<< HEAD
             # Register with lifecycle manager
             self.lifecycle_manager.register_process(process.pid, command)
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             # 타임아웃 설정
             if timeout:
                 asyncio.create_task(self._monitor_timeout(process.pid, timeout))
@@ -176,9 +188,12 @@ class ProcessManager:
     async def _monitor_timeout(self, pid: int, timeout: float):
         """프로세스 타임아웃 모니터링"""
         try:
+<<<<<<< HEAD
             # Ensure timeout is a number, not a string
             if isinstance(timeout, str):
                 timeout = float(timeout)
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             await asyncio.sleep(timeout)
             
             # 타임아웃 시 프로세스 강제 종료
@@ -395,19 +410,25 @@ class ProcessManager:
         logger.info(f"Received signal {signum}, initiating process cleanup")
         asyncio.create_task(self.terminate_all_processes())
     
+<<<<<<< HEAD
     def update_process_output(self, pid: int, output_line: str):
         """Update process activity with output line for completion detection."""
         if pid in self.managed_processes:
             self.lifecycle_manager.update_activity(pid, output_line)
     
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     def _emergency_cleanup(self):
         """긴급 정리 (atexit 핸들러)"""
         logger.critical("Emergency process cleanup initiated")
         
+<<<<<<< HEAD
         # Stop lifecycle monitoring
         if hasattr(self, 'lifecycle_manager'):
             self.lifecycle_manager.stop_monitoring()
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # 모든 관리되는 프로세스 강제 종료
         for proc in self.managed_processes.values():
             try:

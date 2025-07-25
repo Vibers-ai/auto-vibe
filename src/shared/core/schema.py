@@ -75,7 +75,11 @@ TASKS_JSON_SCHEMA = {
                 },
                 "project_area": {
                     "type": "string",
+<<<<<<< HEAD
                     "enum": ["backend", "frontend", "shared", "database", "infrastructure", "testing", "deployment", "documentation"],
+=======
+                    "enum": ["backend", "frontend", "shared"],
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                     "description": "Which area of the project this task belongs to"
                 },
                 "files_to_create_or_modify": {
@@ -197,7 +201,11 @@ class Task(BaseModel):
     type: str = Field(..., pattern=r"^(setup|backend|frontend|database|testing|deployment|general)$")
     dependencies: List[str] = Field(default_factory=list)
     status: str = Field(default="pending", pattern=r"^(pending|in_progress|completed|failed)$")
+<<<<<<< HEAD
     project_area: str = Field(..., pattern=r"^(backend|frontend|shared|database|infrastructure|testing|deployment|documentation)$")
+=======
+    project_area: str = Field(..., pattern=r"^(backend|frontend|shared)$")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     files_to_create_or_modify: List[str] = Field(default_factory=list)
     acceptance_criteria: AcceptanceCriteria
     estimated_hours: Optional[float] = Field(None, ge=0.5, le=8.0)
@@ -373,6 +381,7 @@ class TaskSchemaValidator:
             if 'type' not in fixed_task:
                 fixed_task['type'] = 'general'
             
+<<<<<<< HEAD
             # Infer project_area if missing or invalid
             if 'project_area' not in fixed_task:
                 # Infer based on task type
@@ -404,6 +413,11 @@ class TaskSchemaValidator:
                     fixed_task['project_area'] = 'deployment'
                 else:
                     fixed_task['project_area'] = 'shared'
+=======
+            # Infer project_area if missing
+            if 'project_area' not in fixed_task:
+                fixed_task['project_area'] = 'shared'
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             fixed_tasks.append(fixed_task)
         

@@ -7,7 +7,10 @@ import json
 import tempfile
 import os
 import time
+<<<<<<< HEAD
 import threading
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 from typing import Dict, Any, List, Optional, AsyncGenerator
 from datetime import datetime
 from pathlib import Path
@@ -19,9 +22,12 @@ from shared.tools.aci_interface import ACIInterface
 
 logger = logging.getLogger(__name__)
 
+<<<<<<< HEAD
 # Global lock for PTY operations to prevent conflicts
 _pty_lock = threading.Lock()
 
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 class ClaudeCliExecutor:
     """Enhanced Claude CLI Executor with worker pool support."""
@@ -37,17 +43,26 @@ class ClaudeCliExecutor:
             'successful_tasks': 0,
             'failed_tasks': 0
         }
+<<<<<<< HEAD
         # Find Claude CLI path dynamically
         self.claude_cli_path = self._find_claude_cli()
         logger.info(f"Claude CLI Executor {worker_id} initialized with CLI path: {self.claude_cli_path}")
+=======
+        logger.info(f"Claude CLI Executor {worker_id} initialized")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     
     async def execute_task_with_curated_context(
         self,
         task: Task,
         workspace_path: str,
+<<<<<<< HEAD
         master_context: str,
         task_specific_context: str = "",
         timeout: int = 1800
+=======
+        curated_context: str,
+        timeout: int = 600
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     ) -> Dict[str, Any]:
         """Execute a task using Claude CLI with curated context."""
         
@@ -55,11 +70,16 @@ class ClaudeCliExecutor:
         logger.info(f"Worker {self.worker_id} executing task {task.id}")
         
         try:
+<<<<<<< HEAD
             # Combine both context sources
             combined_context = f"{master_context}\n\n{task_specific_context}"
             
             # Prepare CLI prompt
             cli_prompt = self._create_cli_prompt(task, workspace_path, combined_context)
+=======
+            # Prepare CLI prompt
+            cli_prompt = self._create_cli_prompt(task, workspace_path, curated_context)
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             # Execute with Claude CLI
             result = await self._execute_claude_cli(cli_prompt, workspace_path, timeout)
@@ -86,12 +106,15 @@ class ClaudeCliExecutor:
             
             logger.error(f"Worker {self.worker_id} failed to execute task {task.id}: {e}")
             
+<<<<<<< HEAD
             # Check for Claude usage limit error
             error_message = str(e).lower()
             if "ai usage limit reached" in error_message or "usage limit" in error_message:
                 logger.critical("🚫 Claude usage limit reached - terminating execution")
                 raise SystemExit("🚫 Claude 용량 제한에 도달했습니다. 잠시 후 다시 시도해주세요.")
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             return {
                 'success': False,
                 'error': str(e),
@@ -101,6 +124,7 @@ class ClaudeCliExecutor:
             }
     
     def _create_cli_prompt(self, task: Task, workspace_path: str, curated_context: str) -> str:
+<<<<<<< HEAD
         """Create clear and explicit CLI prompt for file creation."""
         
         # Extract tech stack info
@@ -206,6 +230,51 @@ Start by creating the first file now. When done, write: TASK IMPLEMENTATION COMP
         logger.warning("Claude CLI not found in standard locations, trying 'claude' directly")
         return 'claude'
     
+=======
+        """Create optimized CLI prompt for task execution."""
+        
+        prompt = f"""You are Code Claude, an expert software developer working via CLI.
+
+**WORKSPACE:** {workspace_path}
+**TASK ID:** {task.id}
+**TASK TYPE:** {task.type}
+**PROJECT AREA:** {task.project_area}
+
+**MASTER'S CURATED CONTEXT:**
+{curated_context}
+
+**TASK DESCRIPTION:**
+{task.description}
+
+**FILES TO CREATE/MODIFY:**
+{', '.join(task.files_to_create_or_modify)}
+
+**ACCEPTANCE CRITERIA:**
+{json.dumps(task.acceptance_criteria.dict() if hasattr(task.acceptance_criteria, 'dict') else task.acceptance_criteria, indent=2)}
+
+**DEPENDENCIES (COMPLETED):**
+{', '.join(task.dependencies) if task.dependencies else 'None'}
+
+**TECHNICAL DETAILS:**
+{json.dumps(task.technical_details.dict() if hasattr(task.technical_details, 'dict') else task.technical_details or {}, indent=2)}
+
+**INSTRUCTIONS:**
+1. Follow the exact task description and acceptance criteria
+2. Use the curated context to maintain consistency with the project
+3. Create/modify only the specified files
+4. Follow established patterns and conventions from the context
+5. Write clean, well-documented, production-ready code
+6. Run tests if specified in acceptance criteria
+7. Signal completion clearly when done
+
+**COMPLETION SIGNAL:**
+When the task is fully complete, output: "TASK IMPLEMENTATION COMPLETE"
+
+Begin implementation now:
+"""
+        return prompt
+    
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     async def _execute_claude_cli(
         self, 
         prompt: str, 
@@ -220,6 +289,7 @@ Start by creating the first file now. When done, write: TASK IMPLEMENTATION COMP
             prompt_file = f.name
         
         try:
+<<<<<<< HEAD
             # Prepare Claude CLI command with absolute path
             # Use --print for non-interactive output
             cmd = ["/usr/bin/claude", "--print", "--dangerously-skip-permissions"]
@@ -333,6 +403,72 @@ Start by creating the first file now. When done, write: TASK IMPLEMENTATION COMP
                     'returncode': -1,
                     'stdout': [],
                     'stderr': []
+=======
+            # Prepare Claude CLI command
+            cmd = [
+                "claude",
+                "--headless",
+                "--project", workspace_path,
+                "--file", prompt_file
+            ]
+            
+            # Execute Claude CLI process with managed process manager
+            process = await create_managed_subprocess_exec(
+                *cmd,
+                creator="claude_cli_executor.execute_with_cli",
+                timeout=timeout,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=workspace_path
+            )
+            
+            # Monitor output for completion
+            stdout_lines = []
+            stderr_lines = []
+            completion_detected = False
+            
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=timeout
+                )
+                
+                if stdout:
+                    stdout_text = stdout.decode('utf-8', errors='ignore')
+                    stdout_lines = stdout_text.split('\n')
+                    
+                    # Check for completion signals
+                    for line in stdout_lines:
+                        detection_result = self.completion_detector.analyze_output(line)
+                        if detection_result.get('completion_found'):
+                            completion_detected = True
+                            break
+                
+                if stderr:
+                    stderr_text = stderr.decode('utf-8', errors='ignore')
+                    stderr_lines = stderr_text.split('\n')
+                
+                # Process completed successfully
+                success = process.returncode == 0 or completion_detected
+                
+                return {
+                    'success': success,
+                    'returncode': process.returncode,
+                    'stdout': stdout_lines,
+                    'stderr': stderr_lines,
+                    'completion_detected': completion_detected,
+                    'completion_signals': self.completion_detector.completion_signals
+                }
+                
+            except asyncio.TimeoutError:
+                # Process timeout is handled by process manager
+                logger.warning(f"Claude CLI execution timed out for process PID {process.pid}")
+                # Process manager will automatically terminate timed-out processes
+                
+                return {
+                    'success': False,
+                    'error': f'Claude CLI execution timed out after {timeout} seconds',
+                    'timeout': True
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                 }
         
         finally:
@@ -348,11 +484,14 @@ Start by creating the first file now. When done, write: TASK IMPLEMENTATION COMP
             'worker_id': self.worker_id,
             'stats': self.execution_stats.copy()
         }
+<<<<<<< HEAD
     
     def inject_master_insights(self, insights: Dict[str, Any]) -> None:
         """Receive insights from Master Claude for improved execution."""
         logger.info(f"Worker {self.worker_id} received insights from Master Claude")
         # This method is for compatibility with the supervisor expectations
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 
 class ClaudeCompletionDetector:
@@ -364,6 +503,7 @@ class ClaudeCompletionDetector:
         self.explicit_completion_patterns = [
             r"TASK IMPLEMENTATION COMPLETE",
             r"TASK FINISHED SUCCESSFULLY", 
+<<<<<<< HEAD
             r"WORK COMPLETED",
             r"IMPLEMENTATION COMPLETE",
             r"ALL DONE",
@@ -372,6 +512,9 @@ class ClaudeCompletionDetector:
             r"JOB FINISHED",
             r"EXECUTION COMPLETE",
             r"FINISHED PROCESSING"
+=======
+            r"WORK COMPLETED"
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         ]
         # General completion indicators (lower priority)
         self.task_completion_patterns = [
@@ -575,8 +718,13 @@ class FileSystemMonitor:
         }
 
 
+<<<<<<< HEAD
 class LegacyClaudeCliExecutor:
     """Legacy Claude executor that uses Claude Code CLI (kept for compatibility)."""
+=======
+class ClaudeCliExecutor:
+    """Enhanced Claude executor that uses Claude Code CLI."""
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     
     def __init__(self, config: Config):
         self.config = config
@@ -747,6 +895,7 @@ class LegacyClaudeCliExecutor:
         prompt += f"""
 
 **CURRENT TASK DETAILS:**
+<<<<<<< HEAD
 - Task ID: {task.id}
 - Description: {task.description}
 - Type: {task.type}
@@ -772,6 +921,12 @@ class LegacyClaudeCliExecutor:
                 prompt += "\n  CONTENT: fastapi, uvicorn[standard], sqlalchemy, pydantic, python-multipart"
         
         prompt += """
+=======
+- Description: {task.description}
+- Type: {task.type}
+- Project Area: {task.project_area}
+- Files to modify: {', '.join(task.files_to_create_or_modify)}
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 **ACCEPTANCE CRITERIA:**
 """
@@ -794,6 +949,7 @@ class LegacyClaudeCliExecutor:
             for check in criteria.manual_checks:
                 prompt += f"- {check}\n"
         
+<<<<<<< HEAD
         prompt += f"""
 
 **CRITICAL INSTRUCTIONS:**
@@ -810,6 +966,21 @@ class LegacyClaudeCliExecutor:
 4. Report completion
 
 START NOW - Create the first file:"""
+=======
+        prompt += """
+
+**INSTRUCTIONS:**
+1. Follow the established patterns and conventions shown above
+2. Build upon the work already completed (as described in the context)
+3. Ensure consistency with the existing codebase style
+4. Implement the task requirements precisely
+5. Run tests and verify the acceptance criteria
+6. Provide clear status updates as you work
+
+IMPORTANT: You have context from previous tasks, so build upon existing work rather than recreating everything from scratch.
+
+Begin implementation:"""
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         
         return prompt
     
@@ -836,12 +1007,25 @@ START NOW - Create the first file:"""
             
             logger.info("Using command-line prompt (non-interactive mode)")
             
+<<<<<<< HEAD
             # Set up environment
             env = os.environ.copy()
             env['TERM'] = 'xterm-256color'
             
             # Keep API key for Claude CLI authentication
             logger.info("Using environment API key for Claude CLI authentication")
+=======
+            # Set up environment (like TS example) - no API key needed for logged-in CLI
+            env = os.environ.copy()
+            env['TERM'] = 'xterm-256color'  # Like TS example
+            
+            # Remove any ANTHROPIC_API_KEY to force use of CLI authentication
+            if 'ANTHROPIC_API_KEY' in env:
+                del env['ANTHROPIC_API_KEY']
+                logger.info("Removed ANTHROPIC_API_KEY to use CLI authentication")
+            
+            logger.info("Using Claude CLI local authentication (already logged in)")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             # Validate Claude CLI before execution
             if not os.path.isfile(self.claude_cli_path):
@@ -853,11 +1037,16 @@ START NOW - Create the first file:"""
             logger.info(f"Claude CLI path verified: {self.claude_cli_path}")
             logger.info(f"Working directory: {workspace_path}")
             logger.info(f"Prompt length: {len(prompt)} characters")
+<<<<<<< HEAD
             logger.info(f"Config skip_permissions: {self.config.claude_cli_skip_permissions}")
             if self.config.claude_cli_skip_permissions:
                 logger.info("⚠️  Permission checks are skipped for automated execution")
             else:
                 logger.warning("⚠️  Permission checks are ENABLED - this may cause failures")
+=======
+            if self.config.claude_cli_skip_permissions:
+                logger.info("⚠️  Permission checks are skipped for automated execution")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             # Test Claude CLI with simple command first
             try:
@@ -896,9 +1085,15 @@ START NOW - Create the first file:"""
             
             # Stream output with balanced timeout and file system monitoring
             start_time = asyncio.get_event_loop().time()
+<<<<<<< HEAD
             timeout_seconds = 300  # 5 minutes timeout (as requested by user)
             last_fs_check = start_time
             fs_check_interval = 5  # Check filesystem every 5 seconds for faster detection
+=======
+            timeout_seconds = 180  # 3 minutes timeout (balanced: not too short, not too long)
+            last_fs_check = start_time
+            fs_check_interval = 8  # Check filesystem every 8 seconds (balanced frequency)
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             while True:
                 try:
@@ -951,28 +1146,43 @@ START NOW - Create the first file:"""
                                 yield f"⚡ File system completion detected - terminating process"
                                 await terminate_managed_process(process.pid)
                                 break
+<<<<<<< HEAD
                             elif activity['seconds_since_last_change'] > 30:  # 30초 동안 파일 활동이 없으면 중단
+=======
+                            elif activity['seconds_since_last_change'] > 75:  # Longer wait without Claude signals
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                                 if activity['files_created'] >= 2 and current_time - start_time > 75:
                                     yield f"🎯 Conservative completion: {activity['files_created']} files created, {activity['seconds_since_last_change']}s idle"
                                     yield f"⚡ Timeout-based completion detected - terminating process"
                                     await terminate_managed_process(process.pid)
                                     break
+<<<<<<< HEAD
                                 elif current_time - start_time > 60:  # 1분 이상 경과시 경고
+=======
+                                elif current_time - start_time > 120:  # Extended patience
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                                     yield f"⚠️ No file changes for {activity['seconds_since_last_change']}s - Claude might be thinking or stuck"
                         
                         last_fs_check = current_time
                     
                     # Read line with shorter timeout
+<<<<<<< HEAD
                     line = await asyncio.wait_for(process.stdout.readline(), timeout=1.0)
+=======
+                    line = await asyncio.wait_for(process.stdout.readline(), timeout=2.0)
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                     if not line:
                         break
                     
                     line_str = line.decode('utf-8').strip()
                     if line_str:
+<<<<<<< HEAD
                         # Update process activity in process manager
                         from shared.core.process_manager import ProcessManager
                         ProcessManager.get_instance().update_process_output(process.pid, line_str)
                         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                         # Analyze Claude's output for completion signals
                         completion_analysis = completion_detector.analyze_output(line_str)
                         
@@ -987,7 +1197,11 @@ START NOW - Create the first file:"""
                         # Immediate termination for explicit completion messages
                         if completion_analysis['immediate_finish']:
                             yield f"✅ EXPLICIT COMPLETION MESSAGE DETECTED!"
+<<<<<<< HEAD
                             yield f"⚡ Claude sent 'TASK IMPLEMENTATION COMPLETE' - terminating immediately"
+=======
+                            yield f"⚡ Claude sent explicit completion signal - terminating immediately"
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                             await terminate_managed_process(process.pid)
                             break
                         
@@ -999,6 +1213,7 @@ START NOW - Create the first file:"""
                             break
                         
                 except asyncio.TimeoutError:
+<<<<<<< HEAD
                     # No output for 1 second, check if process is still alive
                     if process.returncode is not None:
                         logger.info("Process has finished")
@@ -1014,6 +1229,15 @@ START NOW - Create the first file:"""
                     
                     # Continue waiting, file system monitoring will show activity
                     continue
+=======
+                    # No output for 5 seconds, check if process is still alive
+                    if process.returncode is not None:
+                        logger.info("Process has finished")
+                        break
+                    else:
+                        # Continue waiting, file system monitoring will show activity
+                        continue
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             # Wait for completion and check for errors
             await process.wait()
@@ -1088,7 +1312,11 @@ START NOW - Create the first file:"""
             process = await create_managed_subprocess_exec(
                 *cmd,
                 creator="claude_cli_executor.execute_streaming_prompt",
+<<<<<<< HEAD
                 timeout=300.0,  # 5분 타임아웃 (as requested by user)
+=======
+                timeout=600.0,  # 10분 타임아웃
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                 cwd=workspace_path,
                 env=env,
                 stdin=asyncio.subprocess.PIPE,
@@ -1096,6 +1324,7 @@ START NOW - Create the first file:"""
                 stderr=asyncio.subprocess.PIPE
             )
             
+<<<<<<< HEAD
             # Use communicate() for more reliable stdin handling
             try:
                 # Send prompt and get all output at once with timeout
@@ -1129,6 +1358,34 @@ START NOW - Create the first file:"""
             if process.returncode != 0:
                 error_msg = stderr.decode('utf-8', errors='replace') if stderr else ""
                 stdout_msg = stdout.decode('utf-8', errors='replace') if stdout else ""
+=======
+            # Send prompt to stdin
+            process.stdin.write(prompt.encode('utf-8'))
+            process.stdin.write('\n'.encode('utf-8'))
+            await process.stdin.drain()
+            process.stdin.close()
+            
+            # Stream output
+            while True:
+                line = await process.stdout.readline()
+                if not line:
+                    break
+                
+                line = line.decode('utf-8').strip()
+                if line:
+                    yield f"Claude CLI: {line}"
+                    await asyncio.sleep(0.1)
+            
+            # Wait for completion
+            await process.wait()
+            
+            if process.returncode != 0:
+                stderr_output = await process.stderr.read()
+                stdout_output = await process.stdout.read()
+                
+                error_msg = stderr_output.decode('utf-8', errors='replace') if stderr_output else ""
+                stdout_msg = stdout_output.decode('utf-8', errors='replace') if stdout_output else ""
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                 
                 # Log detailed error information
                 logger.error(f"Claude CLI (alternative) failed with return code {process.returncode}")
@@ -1269,6 +1526,7 @@ START NOW - Create the first file:"""
     
     def cleanup(self):
         """Clean up session directory and resources."""
+<<<<<<< HEAD
         try:
             # First, terminate any running Claude processes
             from shared.core.process_manager import global_process_manager, terminate_managed_process
@@ -1292,6 +1550,12 @@ START NOW - Create the first file:"""
                 logger.info(f"Cleaned up session directory: {self.session_dir}")
         except Exception as e:
             logger.warning(f"Failed to clean up session directory: {e}")
+=======
+        if self.session_dir and os.path.exists(self.session_dir):
+            import shutil
+            shutil.rmtree(self.session_dir)
+            logger.info(f"Cleaned up session directory: {self.session_dir}")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 
 class PersistentClaudeCliSession:
@@ -1366,10 +1630,14 @@ class PersistentClaudeCliSession:
         
         for area in to_remove:
             if area in self.active_sessions:
+<<<<<<< HEAD
                 try:
                     self.active_sessions[area].cleanup()
                 except Exception as e:
                     logger.warning(f"Failed to cleanup session for {area}: {e}")
+=======
+                self.active_sessions[area].cleanup()
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                 del self.active_sessions[area]
             del self.session_metadata[area]
             logger.info(f"Cleaned up idle CLI session for {area}")
@@ -1381,6 +1649,7 @@ class PersistentClaudeCliSession:
     
     def cleanup_all_sessions(self):
         """Clean up all active sessions."""
+<<<<<<< HEAD
         for area, executor in list(self.active_sessions.items()):
             try:
                 # Check if executor has cleanup method
@@ -1390,6 +1659,10 @@ class PersistentClaudeCliSession:
                     logger.debug(f"Executor for {area} does not have cleanup method")
             except Exception as e:
                 logger.warning(f"Failed to cleanup session for {area}: {e}")
+=======
+        for executor in self.active_sessions.values():
+            executor.cleanup()
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         self.active_sessions.clear()
         self.session_metadata.clear()
         logger.info("Cleaned up all CLI sessions")

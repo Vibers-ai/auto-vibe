@@ -16,13 +16,22 @@ class Config:
     anthropic_api_key: str
     
     # Model Configuration
+<<<<<<< HEAD
     gemini_model: str = "gemini-1.5-flash"
+=======
+    gemini_model: str = "gemini-2.0-flash-exp"
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     claude_model: str = "claude-3-5-sonnet-20241022"
     
     # Execution Configuration
     max_retries: int = 3
+<<<<<<< HEAD
     task_timeout: int = 1800  # seconds (30 minutes)
     parallel_tasks: int = 1  # Single task for debugging
+=======
+    task_timeout: int = 600  # seconds
+    parallel_tasks: int = 4
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     
     # Docker Configuration
     docker_image_name: str = "vibe-sandbox"

@@ -26,8 +26,11 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from shared.utils.config import Config
 from shared.utils.file_utils import read_text_file, write_json_file, write_text_file
+<<<<<<< HEAD
 from shared.agents.architecture_patterns import architecture_library, ProjectType
 from shared.agents.task_optimizer import task_optimizer
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -41,7 +44,10 @@ Given the ProjectBrief below, you must:
    - Choose the technology stack (e.g., Backend: Python/FastAPI, Frontend: React/TypeScript)
    - Define the system architecture (monolithic, microservices, etc.)
    - Explain your technology choices
+<<<<<<< HEAD
    - **IMPORTANT**: Accurately detect if TypeScript is being used (Next.js, React with TypeScript, etc.)
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 2. **Design the Database Schema**
    - Define all tables, columns, data types, relationships, and constraints
@@ -58,6 +64,7 @@ Given the ProjectBrief below, you must:
    - Break down the UI into a component hierarchy
    - Define component purposes, state, and props
    - Consider reusability and maintainability
+<<<<<<< HEAD
    - **IMPORTANT**: Use correct file extensions based on technology stack:
      - TypeScript React: .tsx for components, .ts for utilities
      - JavaScript React: .jsx for components, .js for utilities
@@ -75,6 +82,14 @@ Given the ProjectBrief below, you must:
      - For Next.js: Use src/app/, src/components/, etc.
      - For standard React: Use src/components/, src/utils/, etc.
      - Match file extensions to the chosen technology stack
+=======
+
+5. **Create Detailed Tasks**
+   - Break down the implementation into atomic, verifiable tasks
+   - Each task should be completable in 1-4 hours
+   - Include clear dependencies between tasks
+   - Define acceptance criteria for each task
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 ## ProjectBrief:
 
@@ -154,6 +169,7 @@ Component Hierarchy:
 }
 ```
 
+<<<<<<< HEAD
 Remember (MONOLITHIC SMALL-TASK APPROACH):
 - Tasks should be VERY SMALL and focused on ONE thing
 - Each task adds a single feature/component/function
@@ -164,6 +180,14 @@ Remember (MONOLITHIC SMALL-TASK APPROACH):
 - Include specific file paths and function names
 - Each task should have 1-3 clear acceptance criteria maximum
 - Use descriptive IDs like "create-user-model", "add-user-api-endpoint"
+=======
+Remember:
+- Tasks should be atomic and independently verifiable
+- Include all necessary technical details for implementation
+- Consider proper build order and dependencies
+- Each task should have clear acceptance criteria
+- Use descriptive, unique IDs for tasks
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 Think step by step and be comprehensive in your analysis."""
 
@@ -174,8 +198,11 @@ class MasterPlannerAgent:
     def __init__(self, config: Config):
         self.config = config
         self.gemini_model = None
+<<<<<<< HEAD
         self.architecture_library = architecture_library
         self.task_optimizer = task_optimizer
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         self._setup_gemini()
     
     def _setup_gemini(self):
@@ -223,6 +250,7 @@ class MasterPlannerAgent:
         
         # Extract and validate tasks.json
         tasks_json = parsed_response.get('tasks_json', {})
+<<<<<<< HEAD
         
         # Apply task optimization
         if tasks_json.get('tasks'):
@@ -234,6 +262,8 @@ class MasterPlannerAgent:
             critical_tasks = [t for t in optimized_tasks if t.get('technical_details', {}).get('critical_path')]
             console.print(f"[green]✓ Identified {len(critical_tasks)} critical path tasks[/green]")
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         validated_tasks = self._validate_and_enhance_tasks(tasks_json)
         
         # Save tasks.json
@@ -252,6 +282,7 @@ class MasterPlannerAgent:
         console.print(f"[cyan]📋 Starting _generate_plan function[/cyan]")
         console.print(f"[cyan]📄 Project brief length: {len(project_brief)} characters[/cyan]")
         
+<<<<<<< HEAD
         # Analyze project brief to determine project type and recommend architecture
         project_analysis = self._analyze_project_brief(project_brief)
         architecture_recommendations = self._get_architecture_recommendations(project_analysis)
@@ -262,6 +293,11 @@ class MasterPlannerAgent:
         try:
             prompt = enhanced_prompt
             console.print(f"[cyan]🎯 Prompt template formatted successfully with architecture recommendations[/cyan]")
+=======
+        try:
+            prompt = MASTER_PLANNER_PROMPT.replace("{project_brief}", project_brief)
+            console.print(f"[cyan]🎯 Prompt template formatted successfully[/cyan]")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         except Exception as e:
             console.print(f"[red]❌ Error formatting prompt: {e}[/red]")
             raise
@@ -385,10 +421,13 @@ class MasterPlannerAgent:
         if 'created_at' not in tasks_json:
             tasks_json['created_at'] = datetime.now().isoformat()
         
+<<<<<<< HEAD
         # Detect technology stack from tasks
         tech_stack = self._detect_technology_stack(tasks_json)
         tasks_json['technology_stack'] = tech_stack
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # Validate tasks
         tasks = tasks_json.get('tasks', [])
         validated_tasks = []
@@ -412,12 +451,15 @@ class MasterPlannerAgent:
             
             if 'files_to_create_or_modify' not in task:
                 task['files_to_create_or_modify'] = []
+<<<<<<< HEAD
             else:
                 # Fix file extensions based on detected technology stack
                 task['files_to_create_or_modify'] = self._fix_file_extensions(
                     task['files_to_create_or_modify'], 
                     tech_stack
                 )
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             # Ensure acceptance_criteria has all required fields
             if 'acceptance_criteria' not in task:
@@ -431,6 +473,7 @@ class MasterPlannerAgent:
             if 'manual_checks' not in acceptance_criteria:
                 acceptance_criteria['manual_checks'] = []
             
+<<<<<<< HEAD
             # MONOLITHIC TASK SIZE VALIDATION
             task_complexity_score = self._calculate_task_complexity(task)
             if task_complexity_score > 3:
@@ -441,6 +484,8 @@ class MasterPlannerAgent:
             # Add estimated complexity to task metadata
             task['estimated_complexity'] = task_complexity_score
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             validated_tasks.append(task)
         
         tasks_json['tasks'] = validated_tasks
@@ -448,6 +493,7 @@ class MasterPlannerAgent:
         
         return tasks_json
     
+<<<<<<< HEAD
     def _calculate_task_complexity(self, task: Dict[str, Any]) -> int:
         """Calculate task complexity score (1-5 scale, lower is better for monolithic approach)."""
         complexity_score = 1
@@ -486,6 +532,8 @@ class MasterPlannerAgent:
         
         return min(complexity_score, 5)  # Cap at 5
     
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     def _infer_task_type(self, description: str) -> str:
         """Infer task type from description."""
         description_lower = description.lower()
@@ -559,6 +607,7 @@ This document provides the technical architecture for the project implementation
 Refer to tasks.json for the detailed implementation plan.
 """
         
+<<<<<<< HEAD
         write_text_file("architecture.md", doc_content)
     
     def _detect_technology_stack(self, tasks_json: Dict[str, Any]) -> Dict[str, str]:
@@ -872,3 +921,6 @@ Refer to tasks.json for the detailed implementation plan.
         # Optimize all tasks together
         all_tasks = optimized_tasks + additional_tasks
         return self.task_optimizer.optimize_task_dependencies(all_tasks)
+=======
+        write_text_file("architecture.md", doc_content)
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271

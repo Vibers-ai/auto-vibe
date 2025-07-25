@@ -2,11 +2,17 @@
 
 import asyncio
 import logging
+<<<<<<< HEAD
 import os
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 import json
 from pathlib import Path
+=======
+from typing import Dict, Any, List, Optional, Tuple
+from datetime import datetime
+import json
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 import google.generativeai as genai
 from rich.console import Console
@@ -18,18 +24,24 @@ from cli.agents.claude_cli_executor import PersistentClaudeCliSession
 from shared.agents.context_manager import ContextManager, ContextCompressionStrategy
 from shared.utils.api_manager import api_manager, APIProvider
 from shared.utils.response_validator import validate_ai_response
+<<<<<<< HEAD
 from shared.utils.json_repair import JSONRepair
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 from shared.utils.recovery_manager import get_recovery_manager, TaskStatus
 from shared.core.consistency_manager import ConsistencyManager
 from shared.core.circuit_breaker import global_circuit_breaker_manager, GEMINI_CIRCUIT_CONFIG
 from shared.core.deadlock_detector import global_deadlock_detector
 from shared.core.file_operation_guard import global_file_guard
+<<<<<<< HEAD
 from shared.core.workspace_analyzer import workspace_analyzer
 from shared.core.enhanced_logger import get_logger, LogCategory
 from shared.core.tech_stack_enforcer import tech_stack_enforcer
 from shared.core.realtime_syntax_validator import realtime_syntax_validator, LanguageType, ValidationLevel
 from shared.core.file_activity_monitor import get_file_activity_monitor
 from shared.core.worker_pool_manager import get_worker_pool_manager, TaskPriority as WorkerTaskPriority
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -47,10 +59,13 @@ class MasterClaudeCliSupervisor:
         # Initialize recovery manager
         self.recovery_manager = None  # Will be set when project is known
         
+<<<<<<< HEAD
         # Track completed tasks
         self.completed_tasks = set()
         self.tasks_plan = None
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # Context management
         self.context_manager = ContextManager(config, max_context_tokens)
         self.max_context_tokens = max_context_tokens
@@ -61,18 +76,24 @@ class MasterClaudeCliSupervisor:
         # Enhanced Code Claude CLI management
         self.persistent_cli_sessions = PersistentClaudeCliSession(config)
         
+<<<<<<< HEAD
         # Worker pool for parallel execution
         self.worker_pool = None
         self.enable_parallel_execution = True
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # State tracking
         self.execution_history: List[Dict[str, Any]] = []
         self.current_workspace_state = {}
         self.task_progress = {}
         
+<<<<<<< HEAD
         # Enhanced logging
         self.logger = None  # Will be initialized per task
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # Code Claude CLI insights tracking
         self.claude_insights = {
             'established_patterns': [],
@@ -97,7 +118,11 @@ class MasterClaudeCliSupervisor:
         self.gemini_model = genai.GenerativeModel(self.config.gemini_model)
     
     async def execute_task_with_cli_supervision(self, task: Task, workspace_path: str, 
+<<<<<<< HEAD
                                                tasks_plan: TasksPlan, workspace_context: Optional[str] = None) -> Dict[str, Any]:
+=======
+                                               tasks_plan: TasksPlan) -> Dict[str, Any]:
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         """Execute a task with Master Claude supervision and Code Claude CLI execution.
         
         Args:
@@ -108,6 +133,7 @@ class MasterClaudeCliSupervisor:
         Returns:
             Execution result with detailed feedback
         """
+<<<<<<< HEAD
         # Initialize enhanced logger for this task
         session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.logger = get_logger(
@@ -161,12 +187,20 @@ class MasterClaudeCliSupervisor:
             primary_stack = workspace_structure.technology_stacks[0]
             console.print(f"[cyan]📚 Detected tech stack: {primary_stack.stack.value} ({primary_stack.confidence:.1%} confidence)[/cyan]")
         
+=======
+        console.print(f"[blue]🧠 Master Claude starting CLI supervision of task: {task.id}[/blue]")
+        
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # 데드락 감지기에 작업 등록
         worker_id = f"master_claude_{id(self)}"
         global_deadlock_detector.register_task(
             task.id, 
             set(task.dependencies), 
+<<<<<<< HEAD
             timeout=1800.0  # 30분 타임아웃
+=======
+            timeout=600.0  # 10분 타임아웃
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         )
         global_deadlock_detector.update_task_status(task.id, "running", worker_id)
         
@@ -176,6 +210,7 @@ class MasterClaudeCliSupervisor:
             console.print(f"[dim]Context: {stats['total_tokens']}/{stats['available_tokens']} tokens ({stats['utilization']:.1%} used)[/dim]")
             
             # Phase 1: Analyze current state and plan execution with managed context
+<<<<<<< HEAD
             execution_plan = await self._analyze_and_plan_with_context(task, workspace_path, tasks_plan, workspace_context)
             
             # Add execution plan to context
@@ -195,6 +230,17 @@ class MasterClaudeCliSupervisor:
                     "code_claude_cli_instructions": f"Implement {task.description}"
                 }
                 logger.warning(f"Execution plan was None, using minimal plan for task {task.id}")
+=======
+            execution_plan = await self._analyze_and_plan_with_context(task, workspace_path, tasks_plan)
+            
+            # Add execution plan to context
+            await self.context_manager.add_context(
+                content=json.dumps(execution_plan, indent=2),
+                content_type="execution_plan",
+                task_ids=[task.id],
+                importance=0.8
+            )
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             # Phase 2: Execute with iterative CLI supervision
             result = await self._execute_with_cli_iterations(task, workspace_path, execution_plan)
@@ -241,15 +287,19 @@ class MasterClaudeCliSupervisor:
             # 데드락 감지기에 완료 상태 업데이트
             global_deadlock_detector.update_task_status(task.id, "completed", worker_id)
             
+<<<<<<< HEAD
             # 작업이 성공했으면 completed_tasks에 추가
             if final_result.get('success', False):
                 self.completed_tasks.add(task.id)
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             return final_result
             
         except Exception as e:
             # 실패 시 데드락 감지기 업데이트
             global_deadlock_detector.update_task_status(task.id, "failed", worker_id)
+<<<<<<< HEAD
             logger.error(f"Task {task.id} execution failed: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
@@ -257,6 +307,13 @@ class MasterClaudeCliSupervisor:
     
     async def _analyze_and_plan_with_context(self, task: Task, workspace_path: str, 
                                             tasks_plan: TasksPlan, workspace_context: Optional[str] = None) -> Dict[str, Any]:
+=======
+            logger.error(f"Task {task.id} execution failed: {e}")
+            raise
+    
+    async def _analyze_and_plan_with_context(self, task: Task, workspace_path: str, 
+                                            tasks_plan: TasksPlan) -> Dict[str, Any]:
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         """Master Claude analyzes the situation with managed context and creates execution plan for CLI."""
         
         # Build optimized context using context manager
@@ -265,6 +322,7 @@ class MasterClaudeCliSupervisor:
         # Gather current workspace state
         workspace_state = await self._get_workspace_state(workspace_path)
         
+<<<<<<< HEAD
         # Determine target workspace relative to output directory
         if task.type == "setup" or task.project_area == "shared":
             target_workspace = "."  # Output directory root for setup tasks
@@ -272,6 +330,10 @@ class MasterClaudeCliSupervisor:
             target_workspace = "frontend"
         else:
             target_workspace = "backend"
+=======
+        # Determine target workspace
+        target_workspace = "frontend" if "fe-" in task.id or "frontend" in task.project_area.lower() else "backend"
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         
         # Generate consistency guidelines for this task
         consistency_prompt = self.consistency_manager.generate_consistency_prompt(task, workspace_path)
@@ -281,9 +343,12 @@ class MasterClaudeCliSupervisor:
 
 **CONTEXT:** {managed_context}
 
+<<<<<<< HEAD
 **WORKSPACE STRUCTURE ANALYSIS:**
 {workspace_context if workspace_context else "No workspace analysis available"}
 
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 **CURRENT WORKSPACE:** {workspace_state}
 
 **TASK:** {task.id} - {task.description}
@@ -355,6 +420,7 @@ class MasterClaudeCliSupervisor:
                 else:
                     plan_text = plan_text[json_start:json_end]
             
+<<<<<<< HEAD
             # Clean up common JSON issues without breaking actual newlines in strings
             plan_text = plan_text.strip()
             
@@ -377,6 +443,22 @@ class MasterClaudeCliSupervisor:
                 logger.info(f"CLI Execution plan: {execution_plan['situation_analysis']}")
             else:
                 logger.info("CLI Execution plan created (using fallback)")
+=======
+            # Clean up common JSON issues
+            plan_text = plan_text.strip()
+            plan_text = plan_text.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+            
+            try:
+                execution_plan = json.loads(plan_text)
+            except json.JSONDecodeError as json_error:
+                logger.warning(f"JSON parsing failed in planning: {json_error}")
+                logger.warning(f"Raw response text: {plan_text[:500]}")
+                # Use fallback plan
+                raise Exception(f"JSON parsing failed: {json_error}")
+            
+            console.print("[green]✓ Master Claude created CLI-optimized execution plan[/green]")
+            logger.info(f"CLI Execution plan: {execution_plan['situation_analysis']}")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             return execution_plan
             
@@ -435,6 +517,7 @@ class MasterClaudeCliSupervisor:
                 task, workspace_path, iteration_result, execution_plan
             )
             
+<<<<<<< HEAD
             # Handle None evaluation (shouldn't happen with the fix above, but be safe)
             if evaluation is None:
                 logger.warning("Evaluation returned None, using fallback")
@@ -445,17 +528,27 @@ class MasterClaudeCliSupervisor:
                     'ready_for_final_verification': False
                 }
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             execution_log.append({
                 'iteration': iteration,
                 'evaluation': evaluation,
                 'timestamp': datetime.now().isoformat()
             })
             
+<<<<<<< HEAD
             if evaluation.get('success', False):
                 success = True
                 console.print(f"[green]✅ Task completed successfully via CLI in iteration {iteration}[/green]")
             elif iteration < max_iterations:
                 console.print(f"[yellow]⚠️ CLI iteration {iteration} needs improvement: {evaluation.get('feedback', 'No feedback available')}[/yellow]")
+=======
+            if evaluation['success']:
+                success = True
+                console.print(f"[green]✅ Task completed successfully via CLI in iteration {iteration}[/green]")
+            elif iteration < max_iterations:
+                console.print(f"[yellow]⚠️ CLI iteration {iteration} needs improvement: {evaluation['feedback']}[/yellow]")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                 # Master Claude will adjust the approach for next iteration
             else:
                 console.print(f"[red]❌ Task failed after {max_iterations} CLI iterations[/red]")
@@ -487,10 +580,17 @@ class MasterClaudeCliSupervisor:
                     previous_attempts += f"Evaluation: {log_entry['evaluation'].get('feedback', 'No feedback')}\n"
         
         # Create concise but clear CLI prompt with structure awareness
+<<<<<<< HEAD
         workspace_area = self._determine_workspace_area(task, workspace_path)
         
         cli_prompt = f"""**TASK:** {task.description}
 **TARGET:** {workspace_area} workspace
+=======
+        workspace_area = "frontend" if "fe-" in task.id or "frontend" in task.project_area.lower() else "backend"
+        
+        cli_prompt = f"""**TASK:** {task.description}
+**TARGET:** {workspace_area}/ workspace
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 **FILES:** {', '.join(task.files_to_create_or_modify)}
 
 **CURRENT WORKSPACE:**
@@ -511,12 +611,21 @@ class MasterClaudeCliSupervisor:
 
 **MANDATORY CHECKS:**
 1. Run `pwd` - confirm you're in correct directory
+<<<<<<< HEAD
 2. Target workspace: {'./' if workspace_area != '.' else ''}{workspace_area}{'' if workspace_area == '.' else '/'}
 3. Check existing structure BEFORE creating files
 4. Install dependencies: {f'`npm install <package> -w {workspace_area}`' if workspace_area != '.' else '`npm install <package>`'}
 
 **STRUCTURE ERRORS TO AVOID:**
 - NO {workspace_area}/{workspace_area}/ nesting{' (root level work)' if workspace_area == '.' else ''}
+=======
+2. Target workspace: ./{workspace_area}/
+3. Check existing structure BEFORE creating files
+4. Install dependencies: `npm install <package> -w {workspace_area}`
+
+**STRUCTURE ERRORS TO AVOID:**
+- NO {workspace_area}/{workspace_area}/ nesting
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 - NO node_modules in wrong location  
 - NO files outside designated workspace
 
@@ -544,10 +653,13 @@ Start with `pwd` command."""
     
     async def _execute_code_claude_cli(self, prompt: str, task: Task, workspace_path: str) -> Dict[str, Any]:
         """Execute Code Claude CLI with the supervised prompt using enhanced session management."""
+<<<<<<< HEAD
         # 파일 활동 모니터 시작
         file_monitor = get_file_activity_monitor(workspace_path)
         await file_monitor.start_monitoring()
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         try:
             # Create curated context for Code Claude CLI
             master_context = await self._create_curated_context_for_code_claude_cli(task)
@@ -558,6 +670,7 @@ Start with `pwd` command."""
                 task, workspace_path, master_context, task_specific_context
             )
             
+<<<<<<< HEAD
             # 파일 활동 보고서 추가
             activity_report = file_monitor.get_activity_report()
             result['file_activity'] = activity_report
@@ -567,21 +680,28 @@ Start with `pwd` command."""
                 logger.warning(f"Task {task.id} may be stuck - no file activity for {activity_report['inactive_seconds']} seconds")
                 result['deadlock_warning'] = True
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             # Learn from Code Claude CLI's insights
             await self._absorb_code_claude_cli_insights(result)
             
             return result
             
         except Exception as e:
+<<<<<<< HEAD
             import traceback
             logger.error(f"Error in enhanced Code Claude CLI execution: {e}", exc_info=True)
             traceback.print_exc()
+=======
+            logger.error(f"Error in enhanced Code Claude CLI execution: {e}")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             return {
                 'success': False,
                 'error': str(e),
                 'summary': f"Enhanced Code Claude CLI execution failed: {e}",
                 'executor_type': 'cli'
             }
+<<<<<<< HEAD
         finally:
             # 파일 활동 모니터 중지
             await file_monitor.stop_monitoring()
@@ -727,6 +847,37 @@ Start with `pwd` command."""
             )
         
         return "\n".join(context_parts)
+=======
+    
+    async def _create_curated_context_for_code_claude_cli(self, task: Task) -> str:
+        """Create structure-aware context for Code Claude CLI execution."""
+        
+        context_parts = []
+        
+        # 1. Target workspace identification
+        target_workspace = "frontend" if "fe-" in task.id or "frontend" in task.project_area.lower() else "backend"
+        context_parts.append(f"TARGET WORKSPACE: {target_workspace}/")
+        
+        # 2. Essential progress
+        completed_count = len([t for t in self.task_progress.values() if t.get('success')])
+        total_count = len(self.execution_history)
+        context_parts.append(f"Progress: {completed_count}/{total_count} tasks completed")
+        
+        # 3. Structure patterns (focus on avoiding errors)
+        structure_patterns = [p for p in self.claude_insights.get('established_patterns', []) if 'structure' in p or 'workspace' in p]
+        if structure_patterns:
+            context_parts.append("Structure patterns: " + "; ".join(structure_patterns[-2:]))
+        
+        # 4. Task-specific file context
+        current_files = await self._get_relevant_file_state(task)
+        if current_files:
+            context_parts.append(f"Current files:\n{current_files}")
+        
+        # 5. Critical workspace reminder
+        context_parts.append(f"CRITICAL: All files must go in {target_workspace}/ workspace. Avoid {target_workspace}/{target_workspace}/ nesting.")
+        
+        return "\n\n".join(context_parts)
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     
     
     async def _absorb_code_claude_cli_insights(self, execution_result: Dict[str, Any]) -> None:
@@ -788,6 +939,7 @@ Start with `pwd` command."""
         file_check = await self._verify_expected_files(task, workspace_path)
         
         # Create structure-aware evaluation prompt
+<<<<<<< HEAD
         target_workspace = self._determine_workspace_area(task, workspace_path)
         
         workspace_desc = "project root" if target_workspace == "." else f"{target_workspace}/ workspace"
@@ -795,11 +947,23 @@ Start with `pwd` command."""
 
 **TASK:** {task.description}
 **TARGET:** {workspace_desc}
+=======
+        target_workspace = "frontend" if "fe-" in task.id or "frontend" in task.project_area.lower() else "backend"
+        
+        evaluation_prompt = f"""Evaluate CLI execution. Check if files are in correct {target_workspace}/ workspace.
+
+**TASK:** {task.description}
+**TARGET:** {target_workspace}/ workspace
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 **RESULT:** {iteration_result.get('success', False)} - {iteration_result.get('summary', 'No summary')}
 **FILES:** {file_check}
 **STRUCTURE:** {updated_state}
 
+<<<<<<< HEAD
 **CHECK:** Are files in {workspace_desc}? No duplicate directories?
+=======
+**CHECK:** Are files in {target_workspace}/ workspace? No duplicate directories?
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 **JSON:**
 ```json
@@ -850,6 +1014,7 @@ Start with `pwd` command."""
             
         except Exception as e:
             logger.error(f"Error in Master Claude CLI evaluation: {e}")
+<<<<<<< HEAD
             # Return a fallback evaluation when Gemini fails
             return {
                 'success': False,
@@ -963,6 +1128,8 @@ Start with `pwd` command."""
                 downstream.append(task)
         
         return downstream
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     
     def _parse_json_with_fallbacks(self, text: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Parse JSON with multiple fallback strategies."""
@@ -1338,6 +1505,7 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
         
         return formatted
     
+<<<<<<< HEAD
     async def _verify_expected_files(self, task: Task, workspace_path: str) -> tuple[str, dict]:
         """Verify that expected files were created/modified using flexible path checking."""
         results = []
@@ -1487,6 +1655,17 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
                 unique_variations.append(path)
         
         return unique_variations
+=======
+    async def _verify_expected_files(self, task: Task, workspace_path: str) -> str:
+        """Verify that expected files were created/modified."""
+        results = []
+        for file_path in task.files_to_create_or_modify:
+            full_path = f"{workspace_path}/{file_path}"
+            exists = await self.aci.file_exists(full_path)
+            results.append(f"- {file_path}: {'✓ exists' if exists else '✗ missing'}")
+        
+        return "Expected Files:\n" + "\n".join(results)
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
     
     async def _final_verification(self, task: Task, workspace_path: str, 
                                 result: Dict[str, Any]) -> Dict[str, Any]:
@@ -1511,11 +1690,16 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
         }
     
     async def _run_acceptance_tests(self, task: Task, workspace_path: str) -> Dict[str, Any]:
+<<<<<<< HEAD
         """Run actual acceptance criteria tests and file verification."""
+=======
+        """Run actual acceptance criteria tests."""
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         results = {
             'tests_passed': [],
             'tests_failed': [],
             'linting_passed': False,
+<<<<<<< HEAD
             'files_verified': [],
             'file_verification': {}
         }
@@ -1526,6 +1710,12 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
             results['file_verification'] = file_verification_data
             results['all_required_files_exist'] = file_verification_data['all_files_exist']
             
+=======
+            'files_verified': []
+        }
+        
+        try:
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             # Run tests
             for test in task.acceptance_criteria.tests:
                 test_result = await self.aci.run_test(
@@ -1543,7 +1733,11 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
                     lint_result = await self.aci.run_command(workspace_path, lint_command)
                     results['linting_passed'] = lint_result.success
             
+<<<<<<< HEAD
             # Legacy file verification (for compatibility)
+=======
+            # Verify files
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             for file_path in task.files_to_create_or_modify:
                 full_path = f"{workspace_path}/{file_path}"
                 if await self.aci.file_exists(full_path):
@@ -1558,6 +1752,7 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
     async def _master_final_assessment(self, task: Task, workspace_path: str,
                                      execution_result: Dict[str, Any],
                                      verification_results: Dict[str, Any]) -> Dict[str, Any]:
+<<<<<<< HEAD
         """Deterministic final assessment based on clear conditions."""
         
         logger.info(f"Conducting rule-based final assessment for task {task.id}")
@@ -1685,10 +1880,92 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
             logger.info(f"  Tests: {tests_passed} passed, {tests_failed} failed")
             if failure_reasons:
                 logger.warning(f"  Issues: {', '.join(failure_reasons)}")
+=======
+        """Master Claude's final assessment of the CLI task completion."""
+        
+        logger.info(f"Conducting final assessment for task {task.id}")
+        
+        try:
+            # Prepare assessment context
+            assessment_context = {
+                'task_description': task.description,
+                'task_type': task.type,
+                'project_area': task.project_area,
+                'expected_files': task.files_to_create_or_modify,
+                'execution_result': execution_result,
+                'verification_results': verification_results,
+                'workspace_state': await self._get_workspace_state(workspace_path)
+            }
+            
+            # Create assessment prompt for Gemini
+            assessment_prompt = f"""
+Conduct a final assessment of this coding task completion:
+
+**TASK DETAILS:**
+Task ID: {task.id}
+Type: {task.type}
+Area: {task.project_area}
+Description: {task.description}
+
+**EXECUTION RESULTS:**
+Success: {execution_result.get('success', False)}
+CLI Effectiveness: {execution_result.get('cli_effectiveness', 'N/A')}
+Feedback: {execution_result.get('feedback', 'No feedback')}
+
+**VERIFICATION RESULTS:**
+Tests Passed: {len(verification_results.get('tests_passed', []))}
+Tests Failed: {len(verification_results.get('tests_failed', []))}
+Linting Passed: {verification_results.get('linting_passed', False)}
+Files Verified: {len(verification_results.get('files_verified', []))}
+
+**EXPECTED FILES:**
+{chr(10).join(f"- {file}" for file in task.files_to_create_or_modify)}
+
+**CURRENT WORKSPACE STATE:**
+{assessment_context['workspace_state'][:1000]}...
+
+Provide a final assessment with:
+1. Overall success determination (true/false)
+2. Quality score (1-10)
+3. Assessment summary (2-3 sentences)
+4. Any concerns or recommendations
+5. Ready for production (true/false)
+
+Format as JSON with keys: success, quality_score, summary, concerns, ready_for_production
+"""
+            
+            # Get assessment from Gemini
+            response = self.gemini_model.generate_content(
+                assessment_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.2,
+                    max_output_tokens=1000
+                )
+            )
+            
+            # Parse assessment response
+            assessment = self._parse_json_with_fallbacks(response.text, assessment_context)
+            
+            # Ensure required fields
+            assessment.setdefault('success', execution_result.get('success', False))
+            assessment.setdefault('quality_score', 5)
+            assessment.setdefault('summary', 'Assessment completed')
+            assessment.setdefault('concerns', [])
+            assessment.setdefault('ready_for_production', assessment.get('success', False))
+            
+            # Add context information
+            assessment['assessment_method'] = 'gemini_llm'
+            assessment['verification_data'] = verification_results
+            assessment['execution_data'] = execution_result
+            
+            logger.info(f"Final assessment for task {task.id}: success={assessment['success']}, "
+                       f"quality={assessment['quality_score']}")
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             
             return assessment
             
         except Exception as e:
+<<<<<<< HEAD
             logger.error(f"Error in rule-based assessment: {e}")
             
             # Simple fallback - just check if files exist
@@ -1701,6 +1978,24 @@ CLI Patterns: {len(self.claude_insights['cli_specific_patterns'])} CLI-specific 
                 'concerns': ['Assessment error occurred'] if not all_files_exist else [],
                 'ready_for_production': all_files_exist,
                 'assessment_method': 'fallback_rule_based',
+=======
+            logger.error(f"Error in final assessment: {e}")
+            
+            # Fallback assessment
+            fallback_success = (
+                execution_result.get('success', False) and
+                len(verification_results.get('tests_failed', [])) == 0 and
+                len(verification_results.get('files_verified', [])) > 0
+            )
+            
+            return {
+                'success': fallback_success,
+                'quality_score': 6 if fallback_success else 3,
+                'summary': f'Fallback assessment due to error: {str(e)}',
+                'concerns': ['Assessment error occurred'],
+                'ready_for_production': fallback_success,
+                'assessment_method': 'fallback',
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                 'error': str(e)
             }
     

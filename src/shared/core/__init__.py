@@ -13,7 +13,10 @@ from .schema import (
 )
 
 from .state_manager import ExecutorState
+<<<<<<< HEAD
 from .feedback_loop import FeedbackLoop
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 __all__ = [
     'Task',
@@ -25,6 +28,10 @@ __all__ = [
     'TASKS_JSON_SCHEMA',
     'create_sample_tasks',
     'has_circular_dependencies',
+<<<<<<< HEAD
     'ExecutorState',
     'FeedbackLoop'
+=======
+    'ExecutorState'
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 ]

@@ -13,7 +13,10 @@ import networkx as nx
 
 from shared.core.schema import Task, TasksPlan
 from shared.utils.config import Config
+<<<<<<< HEAD
 from shared.core.feedback_loop import FeedbackLoop
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
 
 logger = logging.getLogger(__name__)
 
@@ -258,7 +261,10 @@ class ParallelTaskExecutor:
         self.max_parallel_tasks = max_parallel_tasks
         self.claude_pool = CodeClaudePool(config, max_parallel_tasks)
         self.stats = ExecutionStats()
+<<<<<<< HEAD
         self.feedback_loop = None  # Will be initialized with workspace path
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         
         # Import Master Claude supervisor
         from cli.agents.master_claude_cli_supervisor import MasterClaudeCliSupervisor
@@ -273,9 +279,12 @@ class ParallelTaskExecutor:
         
         logger.info(f"Starting parallel execution of {len(tasks_plan.tasks)} tasks")
         
+<<<<<<< HEAD
         # Initialize feedback loop
         self.feedback_loop = FeedbackLoop(workspace_path)
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         # Initialize statistics
         self.stats.total_tasks = len(tasks_plan.tasks)
         start_time = datetime.now()
@@ -333,6 +342,7 @@ class ParallelTaskExecutor:
         logger.info(f"Stats: {self.stats.completed_tasks}/{self.stats.total_tasks} completed, "
                    f"{self.stats.parallel_tasks_executed} executed in parallel")
         
+<<<<<<< HEAD
         # Log feedback summary if available
         if self.feedback_loop:
             summary = self.feedback_loop.get_execution_summary()
@@ -343,6 +353,8 @@ class ParallelTaskExecutor:
             for recommendation in summary['recommendations']:
                 logger.info(f"  - Recommendation: {recommendation}")
         
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
         return overall_success, self.stats
     
     async def _execute_batch_parallel(
@@ -412,6 +424,7 @@ class ParallelTaskExecutor:
             
             logger.info(f"Executing task {task.id} with worker {worker_id}")
             
+<<<<<<< HEAD
             # Apply feedback corrections to task files if available
             if self.feedback_loop:
                 original_files = task.files_to_create_or_modify.copy()
@@ -428,6 +441,8 @@ class ParallelTaskExecutor:
                 if len(original_files) != len(task.files_to_create_or_modify):
                     logger.info(f"Applied feedback corrections for task {task.id}: {len(original_files)} -> {len(task.files_to_create_or_modify)} files")
             
+=======
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
             # Execute task with Master Claude supervision
             result = await self.master_supervisor.execute_task_with_cli_supervision(
                 task, workspace_path, tasks_plan
@@ -439,6 +454,7 @@ class ParallelTaskExecutor:
             self.claude_pool.worker_stats[worker_id]['tasks_completed'] += 1
             self.claude_pool.worker_stats[worker_id]['total_execution_time'] += execution_time
             
+<<<<<<< HEAD
             # Record feedback if available
             success = result.get('overall_success', result.get('success', False))
             if self.feedback_loop and 'file_verification' in result:
@@ -468,6 +484,11 @@ class ParallelTaskExecutor:
             return ParallelExecutionResult(
                 task_id=task.id,
                 success=success,
+=======
+            return ParallelExecutionResult(
+                task_id=task.id,
+                success=result.get('overall_success', result.get('success', False)),
+>>>>>>> b6976b308e82b1aa019bf18e57915c15ddabb271
                 result=result,
                 execution_time=execution_time,
                 group=TaskGroup(task.type),
