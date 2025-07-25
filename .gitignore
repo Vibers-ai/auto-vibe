@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+vibe-env/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project specific
+.env
+*.db
+*.log
+logs/
+output/
+sandbox/
+test_bulletin_board/output/
+test_bulletin_board/logs/
+test_bulletin_board/*.db
+test_bulletin_board/ProjectBrief.md
+test_bulletin_board/architecture.md
+test_bulletin_board/tasks.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Documentation build
+docs/_build/
+docs/_static/
+docs/_templates/
